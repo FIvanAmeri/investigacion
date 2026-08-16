@@ -14,6 +14,7 @@ export enum EstadoUsuario {
 
 export enum RolUsuario {
   INVESTIGADOR = "INVESTIGADOR",
+  COLABORADOR = "COLABORADOR",
   SUPERADMIN = "SUPERADMIN",
 }
 

@@ -7,7 +7,7 @@ import {
 
 const COOKIE_NAME = "investigacion_session";
 
-interface SessionPayload {
+export interface SessionPayload {
   userId: number;
   rol: RolUsuario;
   esSuperAdmin: boolean;
@@ -17,7 +17,9 @@ function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
 
   if (!secret) {
-    throw new Error("JWT_SECRET no está configurado");
+    throw new Error(
+      "JWT_SECRET no está configurado",
+    );
   }
 
   return secret;
@@ -73,6 +75,7 @@ export async function setSessionCookie(
 
 export async function getSession(): Promise<SessionPayload | null> {
   const cookieStore = await cookies();
+
   const token =
     cookieStore.get(COOKIE_NAME)?.value;
 
