@@ -37,12 +37,19 @@ export default function Navbar() {
             ))}
           </nav>
 
-          <div className="hidden lg:block">
+          <div className="hidden items-center gap-3 lg:flex">
             <Link
               href="/investigacion"
-              className="ml-5 flex h-10 items-center justify-center bg-cyan-500 px-5 text-[12px] font-bold uppercase tracking-wide text-white transition-colors hover:bg-cyan-600"
+              className="flex h-10 items-center justify-center bg-cyan-500 px-5 text-[12px] font-bold uppercase tracking-wide text-white transition-colors hover:bg-cyan-600"
             >
               Investigación
+            </Link>
+
+            <Link
+              href="/zona-investigadores"
+              className="flex h-10 items-center justify-center border border-cyan-500 px-5 text-[12px] font-bold uppercase tracking-wide text-cyan-600 transition-colors hover:bg-cyan-500 hover:text-white"
+            >
+              Zona de investigadores
             </Link>
           </div>
 
@@ -188,6 +195,24 @@ function MobileNavigation({
             </div>
           );
         })}
+
+        <div className="mt-3 border-t border-slate-200 pt-3">
+          <Link
+            href="/investigacion"
+            onClick={onNavigate}
+            className="flex h-11 items-center justify-center bg-cyan-500 px-5 text-[12px] font-bold uppercase tracking-wide text-white transition-colors hover:bg-cyan-600"
+          >
+            Investigación
+          </Link>
+
+          <Link
+            href="/zona-investigadores"
+            onClick={onNavigate}
+            className="mt-2 flex h-11 items-center justify-center border border-cyan-500 px-5 text-[12px] font-bold uppercase tracking-wide text-cyan-600 transition-colors hover:bg-cyan-500 hover:text-white"
+          >
+            Zona de investigadores
+          </Link>
+        </div>
       </div>
     </nav>
   );
