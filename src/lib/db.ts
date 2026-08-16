@@ -1,6 +1,9 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
 import { User } from "@/entities/Usuario";
+import { ContenidoPagina } from "@/entities/ContenidoPagina";
+import { Sistema } from "@/entities/Sistema";
+import { TokenVerificacion } from "@/entities/TokenVerificacion";
 
 declare global {
   var appDataSource: DataSource | undefined;
@@ -25,7 +28,12 @@ const dataSourceOptions = {
   username: obtenerVariable("DB_USERNAME"),
   password: obtenerVariable("DB_PASSWORD"),
   database: obtenerVariable("DB_NAME"),
-  entities: [User],
+  entities: [
+    User,
+    ContenidoPagina,
+    Sistema,
+    TokenVerificacion,
+  ],
   synchronize: false,
   logging: false,
 };
@@ -35,15 +43,15 @@ export async function getDatabase(): Promise<DataSource> {
     return globalThis.appDataSource;
   }
 
-  if (!globalThis.appDataSource) {
-    globalThis.appDataSource = new DataSource(
-      dataSourceOptions,
-    );
+  const dataSource =
+    globalThis.appDataSource ??
+    new DataSource(dataSourceOptions);
+
+  if (!dataSource.isInitialized) {
+    await dataSource.initialize();
   }
 
-  if (!globalThis.appDataSource.isInitialized) {
-    await globalThis.appDataSource.initialize();
-  }
+  globalThis.appDataSource = dataSource;
 
-  return globalThis.appDataSource;
+  return dataSource;
 }

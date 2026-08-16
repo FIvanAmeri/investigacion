@@ -1,5 +1,11 @@
 import { redirect } from "next/navigation";
 import { obtenerSuperAdminDashboard } from "@/lib/dashboard";
+import { getDatabase } from "@/lib/db";
+import {
+  EstadoUsuario,
+  RolUsuario,
+} from "@/entities/Usuario";
+import UsuariosPanel from "@/app/components/usuarios/UsuariosTable";
 
 export default async function UsuariosDashboardPage() {
   const superAdmin =
@@ -8,6 +14,30 @@ export default async function UsuariosDashboardPage() {
   if (!superAdmin) {
     redirect("/dashboard");
   }
+
+  const database = await getDatabase();
+  const repository = database.getRepository("usuarios");
+
+  const usuarios = await repository.find({
+    order: {
+      createdAt: "DESC",
+    },
+  });
+
+  const usuariosSerializados = usuarios.map((usuario) => ({
+    id: usuario.id,
+    nombre: usuario.nombre,
+    apellido: usuario.apellido,
+    localidad: usuario.localidad,
+    centroMedico: usuario.centroMedico,
+    especialidad: usuario.especialidad,
+    correo: usuario.correo,
+    estado: usuario.estado,
+    rol: usuario.rol,
+    correoVerificado: usuario.correoVerificado,
+    esSuperAdmin: usuario.esSuperAdmin,
+    createdAt: usuario.createdAt.toISOString(),
+  }));
 
   return (
     <section>
@@ -20,20 +50,19 @@ export default async function UsuariosDashboardPage() {
       </h1>
 
       <p className="mt-3 max-w-2xl text-slate-600">
-        Desde acá vas a poder revisar registros,
-        aprobarlos, rechazarlos y asignarles el rol
-        correspondiente.
+        Revisá los registros, aprobá o rechazá usuarios
+        y asigná el dashboard correspondiente.
       </p>
 
-      <div className="mt-8 border border-slate-200 bg-white p-6">
-        <p className="text-sm text-slate-500">
-          Registros pendientes
-        </p>
-
-        <div className="mt-6">
-          La tabla de usuarios se conectará con la API
-          de administración.
-        </div>
+      <div className="mt-8">
+        <UsuariosPanel
+          usuarios={usuariosSerializados}
+          estados={Object.values(EstadoUsuario)}
+          roles={[
+            RolUsuario.INVESTIGADOR,
+            RolUsuario.COLABORADOR,
+          ]}
+        />
       </div>
     </section>
   );
