@@ -1,3 +1,4 @@
+
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import {
@@ -6,6 +7,7 @@ import {
 } from "@/entities/Usuario";
 
 const COOKIE_NAME = "investigacion_session";
+const SESSION_DURATION_SECONDS = 60 * 60 * 8;
 
 export interface SessionPayload {
   userId: number;
@@ -38,7 +40,19 @@ export function createSessionToken(
     payload,
     getJwtSecret(),
     {
-      expiresIn: "7d",
+      expiresIn: SESSION_DURATION_SECONDS,
+    },
+  );
+}
+
+export function createSessionTokenFromPayload(
+  session: SessionPayload,
+): string {
+  return jwt.sign(
+    session,
+    getJwtSecret(),
+    {
+      expiresIn: SESSION_DURATION_SECONDS,
     },
   );
 }
@@ -68,7 +82,29 @@ export async function setSessionCookie(
         "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: SESSION_DURATION_SECONDS,
+    },
+  );
+}
+
+export async function refreshSessionCookie(
+  session: SessionPayload,
+): Promise<void> {
+  const cookieStore = await cookies();
+  const token =
+    createSessionTokenFromPayload(session);
+
+  cookieStore.set(
+    COOKIE_NAME,
+    token,
+    {
+      httpOnly: true,
+      secure:
+        process.env.NODE_ENV ===
+        "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: SESSION_DURATION_SECONDS,
     },
   );
 }

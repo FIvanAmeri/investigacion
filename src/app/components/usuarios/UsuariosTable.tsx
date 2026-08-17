@@ -15,18 +15,27 @@ interface UsuarioDashboard {
   correoVerificado: boolean;
   esSuperAdmin: boolean;
   createdAt: string;
+  sistemasIds: number[];
+}
+
+interface SistemaDashboard {
+  id: number;
+  nombre: string;
+  slug: string;
 }
 
 interface UsuariosPanelProps {
   usuarios: UsuarioDashboard[];
   estados: string[];
   roles: string[];
+  sistemas: SistemaDashboard[];
 }
 
 export default function UsuariosPanel({
   usuarios: usuariosIniciales,
   estados,
   roles,
+  sistemas,
 }: UsuariosPanelProps) {
   const [usuarios, setUsuarios] =
     useState<UsuarioDashboard[]>(
@@ -52,24 +61,25 @@ export default function UsuariosPanel({
 
   async function actualizarUsuario(
     usuarioId: number,
-    accion: "aprobar" | "rechazar",
+    accion: "aprobar" | "denegar",
     rol?: string,
+    sistemasIds?: number[],
   ) {
     setProcesando(usuarioId);
     setError(null);
 
     try {
       const response = await fetch(
-        "/api/dashboard/usuarios",
+        `/api/dashboard/usuarios/${usuarioId}`,
         {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            usuarioId,
             accion,
             rol,
+            sistemasIds,
           }),
         },
       );
@@ -88,8 +98,12 @@ export default function UsuariosPanel({
           usuario.id === usuarioId
             ? {
                 ...usuario,
-                estado: data.usuario.estado,
+                estado:
+                  data.usuario.estado,
                 rol: data.usuario.rol,
+                sistemasIds:
+                  data.usuario.sistemasIds ??
+                  usuario.sistemasIds,
               }
             : usuario,
         ),
@@ -105,14 +119,16 @@ export default function UsuariosPanel({
     }
   }
 
-  const cantidadPorEstado = (estado: string) =>
+  const cantidadPorEstado = (
+    estado: string,
+  ) =>
     usuarios.filter(
       (usuario) => usuario.estado === estado,
     ).length;
 
   return (
-    <div className="w-full">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div>
+      <div className="grid gap-3 md:grid-cols-3">
         {estados.map((estado) => (
           <button
             key={estado}
@@ -142,27 +158,31 @@ export default function UsuariosPanel({
       )}
 
       <div className="mt-6 overflow-hidden border border-slate-200 bg-white">
-        <div className="hidden overflow-x-auto md:block">
-          <table className="w-full">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1100px]">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="w-[20%] px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                   Usuario
                 </th>
 
-                <th className="w-[40%] px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <th className="px-5 py-4 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
                   Información profesional
                 </th>
 
-                <th className="w-[12%] px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                   Estado
                 </th>
 
-                <th className="w-[12%] px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                   Rol
                 </th>
 
-                <th className="w-[16%] px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Sistemas
+                </th>
+
+                <th className="px-5 py-4 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
                   Acciones
                 </th>
               </tr>
@@ -174,6 +194,7 @@ export default function UsuariosPanel({
                   key={usuario.id}
                   usuario={usuario}
                   roles={roles}
+                  sistemas={sistemas}
                   procesando={
                     procesando === usuario.id
                   }
@@ -184,35 +205,16 @@ export default function UsuariosPanel({
               {usuariosFiltrados.length === 0 && (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-5 py-12 text-center text-sm text-slate-500"
                   >
-                    No hay usuarios en este estado.
+                    No hay usuarios en este
+                    estado.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
-        </div>
-
-        <div className="block md:hidden">
-          {usuariosFiltrados.map((usuario) => (
-            <UsuarioMovil
-              key={usuario.id}
-              usuario={usuario}
-              roles={roles}
-              procesando={
-                procesando === usuario.id
-              }
-              onActualizar={actualizarUsuario}
-            />
-          ))}
-
-          {usuariosFiltrados.length === 0 && (
-            <div className="px-5 py-12 text-center text-sm text-slate-500">
-              No hay usuarios en este estado.
-            </div>
-          )}
         </div>
       </div>
     </div>
@@ -222,17 +224,20 @@ export default function UsuariosPanel({
 interface UsuarioFilaProps {
   usuario: UsuarioDashboard;
   roles: string[];
+  sistemas: SistemaDashboard[];
   procesando: boolean;
   onActualizar: (
     usuarioId: number,
-    accion: "aprobar" | "rechazar",
+    accion: "aprobar" | "denegar",
     rol?: string,
+    sistemasIds?: number[],
   ) => Promise<void>;
 }
 
 function UsuarioFila({
   usuario,
   roles,
+  sistemas,
   procesando,
   onActualizar,
 }: UsuarioFilaProps) {
@@ -244,14 +249,31 @@ function UsuarioFila({
         : roles[0] ?? "",
     );
 
+  const [sistemasSeleccionados, setSistemasSeleccionados] =
+    useState<number[]>(
+      usuario.sistemasIds,
+    );
+
+  const alternarSistema = (
+    sistemaId: number,
+  ) => {
+    setSistemasSeleccionados((actuales) =>
+      actuales.includes(sistemaId)
+        ? actuales.filter(
+            (id) => id !== sistemaId,
+          )
+        : [...actuales, sistemaId],
+    );
+  };
+
   return (
     <tr className="border-b border-slate-100 last:border-b-0">
-      <td className="px-6 py-6 align-middle">
+      <td className="px-5 py-5 align-middle">
         <p className="font-semibold text-slate-950">
           {usuario.nombre} {usuario.apellido}
         </p>
 
-        <p className="mt-1 break-all text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-500">
           {usuario.correo}
         </p>
 
@@ -262,42 +284,92 @@ function UsuarioFila({
         )}
       </td>
 
-      <td className="px-6 py-6 align-middle">
-        <div className="mx-auto grid max-w-[700px] grid-cols-3 gap-3">
-          <DatoUsuario
-            etiqueta="Especialidad"
-            valor={usuario.especialidad}
-          />
+      <td className="px-5 py-5 align-middle">
+        <div className="mx-auto flex max-w-[360px] items-center justify-center">
+          <div className="flex w-full items-center justify-center">
+            <div className="flex flex-1 flex-col items-center justify-center px-4 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                Especialidad
+              </p>
 
-          <DatoUsuario
-            etiqueta="Centro Médico"
-            valor={usuario.centroMedico}
-          />
+              <p className="mt-1 text-sm font-medium text-slate-700">
+                {usuario.especialidad}
+              </p>
+            </div>
 
-          <DatoUsuario
-            etiqueta="Localidad"
-            valor={usuario.localidad}
-          />
+            <div className="flex flex-1 flex-col items-center justify-center border-l border-slate-100 px-4 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                Centro médico
+              </p>
+
+              <p className="mt-1 text-sm font-medium text-slate-700">
+                {usuario.centroMedico}
+              </p>
+            </div>
+
+            <div className="flex flex-1 flex-col items-center justify-center border-l border-slate-100 px-4 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                Localidad
+              </p>
+
+              <p className="mt-1 text-sm font-medium text-slate-700">
+                {usuario.localidad}
+              </p>
+            </div>
+          </div>
         </div>
       </td>
 
-      <td className="px-6 py-6 text-center align-middle">
+      <td className="px-5 py-5 align-middle">
         <EstadoBadge estado={usuario.estado} />
       </td>
 
-      <td className="px-6 py-6 text-center align-middle">
-        <span className="whitespace-nowrap text-sm font-semibold text-slate-700">
+      <td className="px-5 py-5 align-middle">
+        <span className="text-sm font-medium text-slate-700">
           {usuario.esSuperAdmin
             ? "SUPERADMIN"
             : usuario.rol}
         </span>
       </td>
 
-      <td className="px-6 py-6 align-middle">
-        <div className="flex justify-center">
-          {usuario.estado === "PENDIENTE" &&
-            !usuario.esSuperAdmin && (
-              <div className="flex w-full max-w-[230px] flex-col gap-3">
+      <td className="px-5 py-5 align-middle">
+        {usuario.sistemasIds.length > 0 ? (
+          <div className="flex max-w-[220px] flex-col gap-2">
+            {usuario.sistemasIds.map(
+              (sistemaId) => {
+                const sistema =
+                  sistemas.find(
+                    (item) =>
+                      item.id === sistemaId,
+                  );
+
+                return sistema ? (
+                  <span
+                    key={sistema.id}
+                    className="border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700"
+                  >
+                    {sistema.nombre}
+                  </span>
+                ) : null;
+              },
+            )}
+          </div>
+        ) : (
+          <span className="text-sm text-slate-400">
+            Sin sistemas asignados
+          </span>
+        )}
+      </td>
+
+      <td className="px-5 py-5 align-middle text-center">
+        {usuario.estado === "PENDIENTE" &&
+          !usuario.esSuperAdmin && (
+            <div className="mx-auto flex min-w-[250px] flex-col gap-3 text-left">
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Rol
+                </label>
+
                 <select
                   value={rolSeleccionado}
                   onChange={(event) =>
@@ -306,177 +378,75 @@ function UsuarioFila({
                     )
                   }
                   disabled={procesando}
-                  className="h-10 border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-cyan-500"
+                  className="w-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-cyan-500"
                 >
                   {roles.map((rol) => (
-                    <option key={rol} value={rol}>
+                    <option
+                      key={rol}
+                      value={rol}
+                    >
                       {rol}
                     </option>
                   ))}
                 </select>
+              </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    disabled={procesando}
-                    onClick={() =>
-                      onActualizar(
-                        usuario.id,
-                        "aprobar",
-                        rolSeleccionado,
-                      )
-                    }
-                    className="h-10 bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {procesando
-                      ? "Procesando..."
-                      : "Aprobar"}
-                  </button>
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Sistemas asignados
+                </p>
 
-                  <button
-                    type="button"
-                    disabled={procesando}
-                    onClick={() =>
-                      onActualizar(
-                        usuario.id,
-                        "rechazar",
-                      )
-                    }
-                    className="h-10 border border-red-200 px-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Rechazar
-                  </button>
+                <div className="max-h-40 space-y-2 overflow-y-auto border border-slate-200 p-3">
+                  {sistemas.length === 0 ? (
+                    <p className="text-xs text-slate-400">
+                      No hay sistemas disponibles.
+                    </p>
+                  ) : (
+                    sistemas.map((sistema) => (
+                      <label
+                        key={sistema.id}
+                        className="flex cursor-pointer items-center gap-2 text-sm text-slate-700"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={sistemasSeleccionados.includes(
+                            sistema.id,
+                          )}
+                          onChange={() =>
+                            alternarSistema(
+                              sistema.id,
+                            )
+                          }
+                          disabled={procesando}
+                          className="h-4 w-4"
+                        />
+
+                        <span>
+                          {sistema.nombre}
+                        </span>
+                      </label>
+                    ))
+                  )}
                 </div>
               </div>
-            )}
 
-          {usuario.estado !== "PENDIENTE" && (
-            <span className="text-center text-sm text-slate-400">
-              Sin acciones pendientes
-            </span>
-          )}
-        </div>
-      </td>
-    </tr>
-  );
-}
-
-function UsuarioMovil({
-  usuario,
-  roles,
-  procesando,
-  onActualizar,
-}: UsuarioFilaProps) {
-  const [rolSeleccionado, setRolSeleccionado] =
-    useState<string>(
-      usuario.rol === "INVESTIGADOR" ||
-        usuario.rol === "COLABORADOR"
-        ? usuario.rol
-        : roles[0] ?? "",
-    );
-
-  return (
-    <div className="border-b border-slate-200 p-5 last:border-b-0">
-      <div className="text-center">
-        <p className="font-semibold text-slate-950">
-          {usuario.nombre} {usuario.apellido}
-        </p>
-
-        <p className="mt-1 break-all text-sm text-slate-500">
-          {usuario.correo}
-        </p>
-
-        {!usuario.correoVerificado && (
-          <span className="mt-2 inline-flex text-xs font-medium text-amber-600">
-            Correo sin verificar
-          </span>
-        )}
-      </div>
-
-      <div className="mt-6 border-t border-slate-100 pt-5">
-        <p className="mb-4 text-center text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-          Información profesional
-        </p>
-
-        <div className="flex flex-col gap-3">
-          <DatoUsuario
-            etiqueta="Especialidad"
-            valor={usuario.especialidad}
-          />
-
-          <DatoUsuario
-            etiqueta="Centro Médico"
-            valor={usuario.centroMedico}
-          />
-
-          <DatoUsuario
-            etiqueta="Localidad"
-            valor={usuario.localidad}
-          />
-        </div>
-      </div>
-
-      <div className="mt-5 grid grid-cols-2 gap-3 border-t border-slate-100 pt-5">
-        <div className="text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-            Estado
-          </p>
-
-          <div className="mt-2">
-            <EstadoBadge estado={usuario.estado} />
-          </div>
-        </div>
-
-        <div className="text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-            Rol
-          </p>
-
-          <p className="mt-2 text-sm font-semibold text-slate-700">
-            {usuario.esSuperAdmin
-              ? "SUPERADMIN"
-              : usuario.rol}
-          </p>
-        </div>
-      </div>
-
-      {usuario.estado === "PENDIENTE" &&
-        !usuario.esSuperAdmin && (
-          <div className="mt-5 border-t border-slate-100 pt-5">
-            <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-              Acciones
-            </p>
-
-            <div className="flex flex-col gap-3">
-              <select
-                value={rolSeleccionado}
-                onChange={(event) =>
-                  setRolSeleccionado(
-                    event.target.value,
-                  )
-                }
-                disabled={procesando}
-                className="h-11 border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-cyan-500"
-              >
-                {roles.map((rol) => (
-                  <option key={rol} value={rol}>
-                    {rol}
-                  </option>
-                ))}
-              </select>
-
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex gap-2">
                 <button
                   type="button"
-                  disabled={procesando}
+                  disabled={
+                    procesando ||
+                    sistemasSeleccionados.length ===
+                      0
+                  }
                   onClick={() =>
                     onActualizar(
                       usuario.id,
                       "aprobar",
                       rolSeleccionado,
+                      sistemasSeleccionados,
                     )
                   }
-                  className="h-11 bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex-1 bg-slate-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {procesando
                     ? "Procesando..."
@@ -489,44 +459,26 @@ function UsuarioMovil({
                   onClick={() =>
                     onActualizar(
                       usuario.id,
-                      "rechazar",
+                      "denegar",
                     )
                   }
-                  className="h-11 border border-red-200 px-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex-1 border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Rechazar
                 </button>
               </div>
             </div>
+          )}
+
+        {usuario.estado !== "PENDIENTE" && (
+          <div className="flex w-full items-center justify-center text-center">
+            <span className="text-sm text-slate-400">
+              Sin acciones pendientes
+            </span>
           </div>
         )}
-
-      {usuario.estado !== "PENDIENTE" && (
-        <p className="mt-5 border-t border-slate-100 pt-5 text-center text-sm text-slate-400">
-          Sin acciones pendientes
-        </p>
-      )}
-    </div>
-  );
-}
-
-function DatoUsuario({
-  etiqueta,
-  valor,
-}: {
-  etiqueta: string;
-  valor: string;
-}) {
-  return (
-    <div className="flex min-h-[84px] w-full flex-col border border-slate-200 bg-slate-50 px-4 py-3">
-      <p className="flex min-h-[30px] items-start text-[10px] font-semibold uppercase leading-[15px] tracking-[0.14em] text-slate-400">
-        {etiqueta}
-      </p>
-
-      <p className="mt-2 break-words text-sm font-medium leading-5 text-slate-800">
-        {valor || "No informado"}
-      </p>
-    </div>
+      </td>
+    </tr>
   );
 }
 

@@ -2,16 +2,22 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "@/lib/db";
 import {
   EstadoUsuario,
+  RolUsuario,
   User,
 } from "@/entities/Usuario";
-import {
-  getSession,
-} from "@/lib/auth";
+import { UsuarioSistema } from "@/entities/UsuarioSistema";
+import { getSession } from "@/lib/auth";
 
 interface RouteContext {
   params: Promise<{
     id: string;
   }>;
+}
+
+interface ActualizarUsuarioBody {
+  accion?: "aprobar" | "denegar";
+  rol?: RolUsuario;
+  sistemasIds?: number[];
 }
 
 export async function PATCH(
@@ -34,9 +40,8 @@ export async function PATCH(
 
     const { id } = await context.params;
 
-    const body = (await request.json()) as {
-      accion?: "aprobar" | "denegar";
-    };
+    const body =
+      (await request.json()) as ActualizarUsuarioBody;
 
     if (
       body.accion !== "aprobar" &&
@@ -53,7 +58,9 @@ export async function PATCH(
     }
 
     const database = await getDatabase();
-    const repository = database.getRepository(User);
+
+    const repository =
+      database.getRepository(User);
 
     const usuario = await repository.findOne({
       where: {
@@ -85,12 +92,110 @@ export async function PATCH(
     }
 
     if (body.accion === "aprobar") {
-      usuario.estado = EstadoUsuario.APROBADO;
+      if (
+        body.rol !== RolUsuario.INVESTIGADOR &&
+        body.rol !== RolUsuario.COLABORADOR
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Debés seleccionar un rol válido.",
+          },
+          {
+            status: 400,
+          },
+        );
+      }
+
+      const sistemasIds = Array.isArray(
+        body.sistemasIds,
+      )
+        ? [
+            ...new Set(
+              body.sistemasIds.filter(
+                (idSistema) =>
+                  Number.isInteger(idSistema) &&
+                  idSistema > 0,
+              ),
+            ),
+          ]
+        : [];
+
+      if (sistemasIds.length === 0) {
+        return NextResponse.json(
+          {
+            error:
+              "Debés asignar al menos un sistema.",
+          },
+          {
+            status: 400,
+          },
+        );
+      }
+
+      const sistemasExistentes =
+        await database.query<{ id: number }[]>(
+          `
+            SELECT id
+            FROM sistemas
+            WHERE id = ANY($1::int[])
+              AND activo = true
+          `,
+          [sistemasIds],
+        );
+
+      if (
+        sistemasExistentes.length !==
+        sistemasIds.length
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Uno o más sistemas seleccionados no existen o están inactivos.",
+          },
+          {
+            status: 400,
+          },
+        );
+      }
+
+      usuario.estado =
+        EstadoUsuario.APROBADO;
+
+      usuario.rol = body.rol;
 
       await repository.save(usuario);
 
+      const usuarioSistemaRepository =
+        database.getRepository(
+          UsuarioSistema,
+        );
+
+      await usuarioSistemaRepository.delete({
+        usuarioId: usuario.id,
+      });
+
+      const asignaciones =
+        sistemasIds.map((sistemaId) =>
+          usuarioSistemaRepository.create({
+            usuarioId: usuario.id,
+            sistemaId,
+          }),
+        );
+
+      await usuarioSistemaRepository.save(
+        asignaciones,
+      );
+
       return NextResponse.json({
-        mensaje: "Usuario aprobado correctamente.",
+        mensaje:
+          "Usuario aprobado y sistemas asignados correctamente.",
+        usuario: {
+          id: usuario.id,
+          estado: usuario.estado,
+          rol: usuario.rol,
+          sistemasIds,
+        },
       });
     }
 
@@ -100,7 +205,12 @@ export async function PATCH(
       mensaje:
         "Usuario denegado y eliminado correctamente.",
     });
-  } catch {
+  } catch (error) {
+    console.error(
+      "ERROR EN /api/dashboard/usuarios/[id]:",
+      error,
+    );
+
     return NextResponse.json(
       {
         error:

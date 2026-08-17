@@ -33,7 +33,8 @@ export async function POST(request: Request) {
 
     const database = await getDatabase();
 
-    const repository = database.getRepository(User);
+    const repository =
+      database.getRepository<User>("User");
 
     const usuario = await repository.findOne({
       where: {
@@ -51,10 +52,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const passwordCorrecta = await bcrypt.compare(
-      password,
-      usuario.password,
-    );
+    const passwordCorrecta =
+      await bcrypt.compare(
+        password,
+        usuario.password,
+      );
 
     if (!passwordCorrecta) {
       return NextResponse.json(

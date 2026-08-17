@@ -20,7 +20,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-[calc(100vh-108px)] bg-slate-50">
       <Sidebar
         esSuperAdmin={usuario.esSuperAdmin}
         rol={usuario.rol}
@@ -29,7 +29,7 @@ export default async function DashboardLayout({
       />
 
       <main className="min-w-0 flex-1">
-        <div className="mx-auto max-w-7xl px-6 py-10 lg:px-10">
+        <div className="mx-auto w-full max-w-7xl px-6 py-10 lg:px-10">
           {children}
         </div>
       </main>

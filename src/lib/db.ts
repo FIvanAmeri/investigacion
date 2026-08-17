@@ -1,9 +1,8 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
 import { User } from "@/entities/Usuario";
-import { ContenidoPagina } from "@/entities/ContenidoPagina";
 import { Sistema } from "@/entities/Sistema";
-import { TokenVerificacion } from "@/entities/TokenVerificacion";
+import { UsuarioSistema } from "@/entities/UsuarioSistema";
 
 declare global {
   var appDataSource: DataSource | undefined;
@@ -28,12 +27,7 @@ const dataSourceOptions = {
   username: obtenerVariable("DB_USERNAME"),
   password: obtenerVariable("DB_PASSWORD"),
   database: obtenerVariable("DB_NAME"),
-  entities: [
-    User,
-    ContenidoPagina,
-    Sistema,
-    TokenVerificacion,
-  ],
+  entities: [User, Sistema, UsuarioSistema],
   synchronize: false,
   logging: false,
 };

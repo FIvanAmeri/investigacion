@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 interface SidebarProps {
@@ -23,7 +23,11 @@ export default function Sidebar({
   apellido,
 }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
   const [abierto, setAbierto] = useState(false);
+  const [cerrandoSesion, setCerrandoSesion] =
+    useState(false);
 
   const itemsPrincipales: ItemSidebar[] = [
     {
@@ -54,13 +58,12 @@ export default function Sidebar({
     },
   ];
 
-  const items =
-    esSuperAdmin
-      ? itemsSuperAdmin
-      : [
-          ...itemsPrincipales,
-          ...itemsInvestigador,
-        ];
+  const items = esSuperAdmin
+    ? itemsSuperAdmin
+    : [
+      ...itemsPrincipales,
+      ...itemsInvestigador,
+    ];
 
   const estaActivo = (href: string): boolean => {
     if (href === "/dashboard") {
@@ -68,6 +71,24 @@ export default function Sidebar({
     }
 
     return pathname.startsWith(href);
+  };
+
+  const cerrarSesion = async () => {
+    if (cerrandoSesion) {
+      return;
+    }
+
+    setCerrandoSesion(true);
+
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } finally {
+      router.push("/zona-investigadores");
+      router.refresh();
+    }
   };
 
   return (
@@ -90,23 +111,26 @@ export default function Sidebar({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-200 bg-white transition-transform lg:static lg:translate-x-0 ${
-          abierto
+        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col border-r border-slate-200 bg-white transition-transform lg:sticky lg:top-0 lg:z-30 lg:h-[calc(100vh-108px)] lg:translate-x-0 ${abierto
             ? "translate-x-0"
             : "-translate-x-full"
-        }`}
+          }`}
       >
-        <div className="border-b border-slate-200 px-6 py-6">
+        <div className="shrink-0 border-b border-slate-200 px-6 py-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-600">
             Investigación
           </p>
 
-          <h2 className="mt-2 text-xl font-semibold text-slate-950">
+          <Link
+            href="/dashboard"
+            onClick={() => setAbierto(false)}
+            className="mt-2 block text-xl font-semibold text-slate-950 transition-colors hover:text-cyan-600"
+          >
             Dashboard
-          </h2>
+          </Link>
         </div>
 
-        <div className="border-b border-slate-200 px-6 py-5">
+        <div className="shrink-0 border-b border-slate-200 px-6 py-5">
           <p className="font-semibold text-slate-900">
             {nombre} {apellido}
           </p>
@@ -118,30 +142,35 @@ export default function Sidebar({
           </p>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto p-4">
-          {items.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setAbierto(false)}
-              className={`block rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
-                estaActivo(item.href)
-                  ? "bg-cyan-50 text-cyan-700"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
-              }`}
-            >
-              {item.titulo}
-            </Link>
-          ))}
+        <nav className="min-h-0 flex-1 overflow-y-auto p-4">
+          <div className="space-y-1">
+            {items.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setAbierto(false)}
+                className={`block rounded-lg px-4 py-3 text-sm font-medium transition-colors ${estaActivo(item.href)
+                    ? "bg-cyan-50 text-cyan-700"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
+                  }`}
+              >
+                {item.titulo}
+              </Link>
+            ))}
+          </div>
         </nav>
 
-        <div className="border-t border-slate-200 p-4">
-          <Link
-            href="/zona-investigadores"
-            className="block rounded-lg px-4 py-3 text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+        <div className="shrink-0 border-t border-slate-200 p-4">
+          <button
+            type="button"
+            onClick={cerrarSesion}
+            disabled={cerrandoSesion}
+            className="block w-full rounded-lg px-4 py-3 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Volver al sitio
-          </Link>
+            {cerrandoSesion
+              ? "Cerrando sesión..."
+              : "Cerrar sesión"}
+          </button>
         </div>
       </aside>
     </>
