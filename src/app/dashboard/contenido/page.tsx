@@ -1,9 +1,9 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { obtenerSuperAdminDashboard } from "@/lib/dashboard";
 
 export default async function ContenidoDashboardPage() {
-  const superAdmin =
-    await obtenerSuperAdminDashboard();
+  const superAdmin = await obtenerSuperAdminDashboard();
 
   if (!superAdmin) {
     redirect("/dashboard");
@@ -20,43 +20,52 @@ export default async function ContenidoDashboardPage() {
       </h1>
 
       <p className="mt-3 max-w-3xl text-slate-600">
-        Desde este módulo el SuperAdmin podrá administrar
-        el navbar público, submenús, páginas y secciones
-        completas del sitio.
+        Desde este módulo el SuperAdmin puede administrar el
+        navbar público, los submenús y el contenido de las
+        páginas del sitio.
       </p>
 
       <div className="mt-8 grid gap-5 md:grid-cols-3">
-        <div className="border border-slate-200 bg-white p-6">
+        <Link
+          href="/dashboard/contenido/menus"
+          className="border border-slate-200 bg-white p-6 transition hover:border-cyan-400 hover:shadow-sm"
+        >
           <h2 className="font-semibold text-slate-950">
             Menús
           </h2>
 
           <p className="mt-2 text-sm text-slate-600">
-            Crear, editar, ordenar y eliminar elementos
-            del navbar.
+            Crear, editar, ordenar, activar y eliminar
+            elementos principales del navbar.
           </p>
-        </div>
+        </Link>
 
-        <div className="border border-slate-200 bg-white p-6">
+        <Link
+          href="/dashboard/contenido/submenus"
+          className="border border-slate-200 bg-white p-6 transition hover:border-cyan-400 hover:shadow-sm"
+        >
           <h2 className="font-semibold text-slate-950">
             Submenús
           </h2>
 
           <p className="mt-2 text-sm text-slate-600">
-            Crear estructuras padre/hijo para la navegación.
+            Administrar los elementos hijos de cada menú.
           </p>
-        </div>
+        </Link>
 
-        <div className="border border-slate-200 bg-white p-6">
+        <Link
+          href="/dashboard/contenido/secciones"
+          className="border border-slate-200 bg-white p-6 transition hover:border-cyan-400 hover:shadow-sm"
+        >
           <h2 className="font-semibold text-slate-950">
             Secciones
           </h2>
 
           <p className="mt-2 text-sm text-slate-600">
-            Crear, modificar, ordenar y eliminar contenido
-            de las páginas.
+            Administrar contenido editable de las páginas
+            públicas.
           </p>
-        </div>
+        </Link>
       </div>
     </section>
   );

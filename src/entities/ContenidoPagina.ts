@@ -4,46 +4,63 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
 
-export enum TipoContenidoPagina {
-  MENU = "MENU",
-  SUBMENU = "SUBMENU",
-  SECCION = "SECCION",
-}
-
-@Entity({ name: "contenido_pagina" })
+@Entity("contenido_pagina")
 export class ContenidoPagina {
   @PrimaryGeneratedColumn()
   id!: number;
 
   @Column({
-    type: "enum",
-    enum: TipoContenidoPagina,
+    type: "varchar",
+    length: 20,
   })
-  tipo!: TipoContenidoPagina;
+  tipo!: string;
 
-  @Column({ length: 150 })
+  @Column({
+    type: "varchar",
+    length: 150,
+  })
   titulo!: string;
 
-  @Column({ length: 150 })
+  @Column({
+    type: "varchar",
+    length: 150,
+  })
   slug!: string;
 
-  @Column({ type: "text", nullable: true })
+  @Column({
+    type: "text",
+    nullable: true,
+  })
   contenido!: string | null;
 
-  @Column({ type: "jsonb", nullable: true })
+  @Column({
+    type: "jsonb",
+    nullable: true,
+    default: () => "'{}'",
+  })
   configuracion!: Record<string, unknown> | null;
 
-  @Column({ default: 0 })
+  @Column({
+    type: "integer",
+  })
   orden!: number;
 
-  @Column({ default: true })
+  @Column({
+    type: "boolean",
+    default: true,
+  })
   activo!: boolean;
 
-  @Column({ name: "padre_id", nullable: true })
+  @Column({
+    name: "padre_id",
+    type: "integer",
+    nullable: true,
+  })
   padreId!: number | null;
 
   @ManyToOne(
@@ -54,18 +71,24 @@ export class ContenidoPagina {
       onDelete: "CASCADE",
     },
   )
-  @JoinColumn({ name: "padre_id" })
+  @JoinColumn({
+    name: "padre_id",
+  })
   padre!: ContenidoPagina | null;
 
-  @ManyToOne(
+  @OneToMany(
     () => ContenidoPagina,
     (contenido) => contenido.padre,
   )
   hijos!: ContenidoPagina[];
 
-  @CreateDateColumn({ name: "created_at" })
+  @CreateDateColumn({
+    name: "created_at",
+  })
   createdAt!: Date;
 
-  @UpdateDateColumn({ name: "updated_at" })
+  @UpdateDateColumn({
+    name: "updated_at",
+  })
   updatedAt!: Date;
 }

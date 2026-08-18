@@ -3,6 +3,7 @@ import { DataSource } from "typeorm";
 import { User } from "@/entities/Usuario";
 import { Sistema } from "@/entities/Sistema";
 import { UsuarioSistema } from "@/entities/UsuarioSistema";
+import { ContenidoPagina } from "@/entities/ContenidoPagina";
 
 declare global {
   var appDataSource: DataSource | undefined;
@@ -27,7 +28,7 @@ const dataSourceOptions = {
   username: obtenerVariable("DB_USERNAME"),
   password: obtenerVariable("DB_PASSWORD"),
   database: obtenerVariable("DB_NAME"),
-  entities: [User, Sistema, UsuarioSistema],
+  entities: [User, Sistema, UsuarioSistema, ContenidoPagina],
   synchronize: false,
   logging: false,
 };
