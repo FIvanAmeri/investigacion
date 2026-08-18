@@ -45,12 +45,30 @@ export interface NavegacionMenu {
   items?: NavegacionItem[];
 }
 
+function esContenidoTipo(
+  valor: string,
+): valor is ContenidoTipo {
+  return (
+    valor === "MENU" ||
+    valor === "SUBMENU" ||
+    valor === "SECCION"
+  );
+}
+
 function mapearContenido(
   fila: ContenidoPaginaRow,
 ): ContenidoPagina {
+  if (!esContenidoTipo(fila.tipo)) {
+    throw new Error(
+      `Tipo de contenido inválido en la base de datos: ${fila.tipo}`,
+    );
+  }
+
+  const tipo = fila.tipo;
+
   return {
     id: fila.id,
-    tipo: fila.tipo as ContenidoTipo,
+    tipo,
     titulo: fila.titulo,
     slug: fila.slug,
     contenido: fila.contenido,
@@ -113,6 +131,7 @@ export async function obtenerContenido(
 
 function obtenerHref(
   contenido: ContenidoPagina,
+  padre?: ContenidoPagina,
 ): string {
   const configuracion =
     contenido.configuracion ?? {};
@@ -123,14 +142,52 @@ function obtenerHref(
     typeof href === "string" &&
     href.trim()
   ) {
-    return href;
+    return href.trim();
   }
 
   if (contenido.slug === "inicio") {
     return "/";
   }
 
+  if (padre?.slug) {
+    return `/${padre.slug}/${contenido.slug}`;
+  }
+
   return `/${contenido.slug}`;
+}
+
+export async function obtenerSeccionesPagina(
+  paginaSlug: string,
+): Promise<ContenidoPagina[]> {
+  const database = await getDatabase();
+
+  const filas = await database.query<ContenidoPaginaRow[]>(
+    `
+      SELECT
+        seccion.id,
+        seccion.tipo,
+        seccion.titulo,
+        seccion.slug,
+        seccion.contenido,
+        seccion.configuracion,
+        seccion.orden,
+        seccion.activo,
+        seccion.padre_id,
+        seccion.created_at,
+        seccion.updated_at
+      FROM contenido_pagina seccion
+      INNER JOIN contenido_pagina padre
+        ON padre.id = seccion.padre_id
+      WHERE seccion.tipo = 'SECCION'
+        AND seccion.activo = TRUE
+        AND padre.slug = $1
+        AND padre.tipo IN ('MENU', 'SUBMENU')
+      ORDER BY seccion.orden ASC, seccion.id ASC
+    `,
+    [paginaSlug],
+  );
+
+  return filas.map(mapearContenido);
 }
 
 export async function obtenerNavegacionPublica(): Promise<
@@ -175,7 +232,7 @@ export async function obtenerNavegacionPublica(): Promise<
       )
       .map((submenu) => ({
         label: submenu.titulo,
-        href: obtenerHref(submenu),
+        href: obtenerHref(submenu, menu),
       }));
 
     return {

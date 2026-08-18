@@ -1,7 +1,5 @@
 import { redirect } from "next/navigation";
-import {
-  obtenerContenido,
-} from "@/lib/contenido";
+import { obtenerContenido } from "@/lib/contenido";
 import { obtenerSuperAdminDashboard } from "@/lib/dashboard";
 import ContenidoPanel from "@/app/dashboard/contenido/ContenidoPanel";
 
@@ -13,11 +11,35 @@ export default async function SeccionesDashboardPage() {
     redirect("/dashboard");
   }
 
-  const secciones =
-    await obtenerContenido("SECCION");
+  const [secciones, menus, submenus] =
+    await Promise.all([
+      obtenerContenido("SECCION"),
+      obtenerContenido("MENU"),
+      obtenerContenido("SUBMENU"),
+    ]);
 
-  const padres =
-    await obtenerContenido("SUBMENU");
+  const paginas = [
+    ...menus.map((menu) => ({
+      id: menu.id,
+      tipo: "MENU" as const,
+      titulo: menu.titulo,
+      slug: menu.slug,
+      padreTitulo: null,
+    })),
+    ...submenus.map((submenu) => {
+      const menuPadre = menus.find(
+        (menu) => menu.id === submenu.padreId,
+      );
+
+      return {
+        id: submenu.id,
+        tipo: "SUBMENU" as const,
+        titulo: submenu.titulo,
+        slug: submenu.slug,
+        padreTitulo: menuPadre?.titulo ?? null,
+      };
+    }),
+  ];
 
   return (
     <section>
@@ -30,15 +52,14 @@ export default async function SeccionesDashboardPage() {
       </h1>
 
       <p className="mt-3 max-w-3xl text-slate-600">
-        Administrá el contenido interno asociado a las
-        distintas páginas del sitio público.
+        Administrá directamente el contenido que se muestra dentro de cada página pública.
       </p>
 
       <div className="mt-8">
         <ContenidoPanel
           tipo="SECCION"
           contenidosIniciales={secciones}
-          padres={padres}
+          paginas={paginas}
         />
       </div>
     </section>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { obtenerSuperAdminDashboard } from "@/lib/dashboard";
 import { getDatabase } from "@/lib/db";
-import { ContenidoTipo } from "@/lib/contenido";
+import type { ContenidoTipo } from "@/lib/contenido";
 
 interface CrearContenidoBody {
   tipo: ContenidoTipo;
@@ -16,7 +16,7 @@ interface CrearContenidoBody {
 
 interface ContenidoCreado {
   id: number;
-  tipo: string;
+  tipo: ContenidoTipo;
   titulo: string;
   slug: string;
   contenido: string | null;
@@ -34,6 +34,26 @@ function esTipoContenido(
     valor === "SUBMENU" ||
     valor === "SECCION"
   );
+}
+
+function esObjetoConfiguracion(
+  valor: unknown,
+): valor is Record<string, unknown> {
+  return (
+    typeof valor === "object" &&
+    valor !== null &&
+    !Array.isArray(valor)
+  );
+}
+
+function normalizarSlug(valor: string): string {
+  return valor
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 export async function GET(request: NextRequest) {
@@ -98,20 +118,34 @@ export async function POST(
     );
   }
 
-  const body =
-    (await request.json()) as CrearContenidoBody;
+  let body: CrearContenidoBody;
 
-  if (!esTipoContenido(body.tipo)) {
+  try {
+    body =
+      (await request.json()) as CrearContenidoBody;
+  } catch {
     return NextResponse.json(
-      {
-        error: "Tipo de contenido inválido.",
-      },
+      { error: "El cuerpo de la solicitud no es válido." },
       { status: 400 },
     );
   }
 
-  const titulo = body.titulo?.trim();
-  const slug = body.slug?.trim();
+  if (!esTipoContenido(body.tipo)) {
+    return NextResponse.json(
+      { error: "Tipo de contenido inválido." },
+      { status: 400 },
+    );
+  }
+
+  const titulo =
+    typeof body.titulo === "string"
+      ? body.titulo.trim()
+      : "";
+
+  const slug =
+    typeof body.slug === "string"
+      ? normalizarSlug(body.slug)
+      : "";
 
   if (!titulo || !slug) {
     return NextResponse.json(
@@ -119,6 +153,38 @@ export async function POST(
         error:
           "El título y el slug son obligatorios.",
       },
+      { status: 400 },
+    );
+  }
+
+  if (
+    body.orden !== undefined &&
+    (!Number.isInteger(body.orden) ||
+      body.orden < 1)
+  ) {
+    return NextResponse.json(
+      { error: "El orden debe ser un entero mayor o igual a 1." },
+      { status: 400 },
+    );
+  }
+
+  if (
+    body.activo !== undefined &&
+    typeof body.activo !== "boolean"
+  ) {
+    return NextResponse.json(
+      { error: "El estado activo debe ser booleano." },
+      { status: 400 },
+    );
+  }
+
+  if (
+    body.configuracion !== undefined &&
+    body.configuracion !== null &&
+    !esObjetoConfiguracion(body.configuracion)
+  ) {
+    return NextResponse.json(
+      { error: "La configuración debe ser un objeto JSON." },
       { status: 400 },
     );
   }
@@ -139,18 +205,38 @@ export async function POST(
 
   if (
     body.tipo !== "MENU" &&
-    !body.padreId
+    (!Number.isInteger(body.padreId) ||
+      !body.padreId ||
+      body.padreId < 1)
   ) {
     return NextResponse.json(
       {
         error:
-          "Los submenús y las secciones necesitan un elemento padre.",
+          "Los submenús y las secciones necesitan un elemento padre válido.",
       },
       { status: 400 },
     );
   }
 
   const database = await getDatabase();
+
+  const slugExistente =
+    await database.query<{ id: number }[]>(
+      `
+        SELECT id
+        FROM contenido_pagina
+        WHERE slug = $1
+        LIMIT 1
+      `,
+      [slug],
+    );
+
+  if (slugExistente[0]) {
+    return NextResponse.json(
+      { error: "Ya existe un contenido con ese slug." },
+      { status: 409 },
+    );
+  }
 
   if (
     body.tipo !== "MENU" &&
@@ -175,10 +261,7 @@ export async function POST(
 
     if (!padre[0]) {
       return NextResponse.json(
-        {
-          error:
-            "El elemento padre no existe.",
-        },
+        { error: "El elemento padre no existe." },
         { status: 400 },
       );
     }
@@ -198,12 +281,13 @@ export async function POST(
 
     if (
       body.tipo === "SECCION" &&
+      padre[0].tipo !== "MENU" &&
       padre[0].tipo !== "SUBMENU"
     ) {
       return NextResponse.json(
         {
           error:
-            "Una sección solamente puede pertenecer a un submenú.",
+            "La sección debe asociarse a una página válida.",
         },
         { status: 400 },
       );
@@ -268,39 +352,17 @@ export async function POST(
       );
 
     return NextResponse.json(
-      {
-        contenido: resultado[0],
-      },
+      { contenido: resultado[0] },
       { status: 201 },
     );
   } catch (error) {
-    const codigo =
-      error &&
-      typeof error === "object" &&
-      "code" in error
-        ? error.code
-        : null;
-
-    if (codigo === "23505") {
-      return NextResponse.json(
-        {
-          error:
-            "Ya existe un contenido con ese slug.",
-        },
-        { status: 409 },
-      );
-    }
-
     console.error(
       "ERROR POST /api/dashboard/contenido:",
       error,
     );
 
     return NextResponse.json(
-      {
-        error:
-          "No se pudo crear el contenido.",
-      },
+      { error: "No se pudo crear el contenido." },
       { status: 500 },
     );
   }
