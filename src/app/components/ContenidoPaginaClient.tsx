@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -86,7 +87,11 @@ function imagenesDeSeccion(
   if (Array.isArray(config.imagenes) && config.imagenes.length > 0) {
     const validas = config.imagenes.filter(
       (imagen): imagen is ImagenPublica =>
-        Boolean(imagen && typeof imagen.url === "string" && imagen.url.trim()),
+        Boolean(
+          imagen &&
+            typeof imagen.url === "string" &&
+            imagen.url.trim(),
+        ),
     );
 
     if (validas.some((imagen) => imagen.principal)) {
@@ -129,6 +134,7 @@ function tieneFuente(
   seccion: SeccionPublica,
 ): boolean {
   const config = configuracion(seccion);
+
   return Boolean(
     config.mostrarFuente &&
       config.fuenteNombre?.trim(),
@@ -167,6 +173,7 @@ function Cabecera({
       <div className="mx-auto max-w-7xl px-6 py-14 sm:py-16">
         <div className="flex items-center gap-4">
           <span className="h-px w-10 bg-cyan-500" />
+
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-600">
             {config.etiqueta || "Contenido"}
           </p>
@@ -186,7 +193,10 @@ function Cabecera({
           <div className="relative mt-10 max-w-4xl overflow-hidden border border-slate-200 bg-white">
             <Image
               src={imagenPrincipal(seccion)?.url ?? ""}
-              alt={imagenPrincipal(seccion)?.alt || seccion.titulo}
+              alt={
+                imagenPrincipal(seccion)?.alt ||
+                seccion.titulo
+              }
               width={1400}
               height={700}
               className="h-auto w-full object-cover"
@@ -216,6 +226,7 @@ function Fuente({
       <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
         Fuente
       </p>
+
       {config.fuenteUrl ? (
         <a
           href={config.fuenteUrl}
@@ -235,7 +246,9 @@ function Fuente({
 
   return (
     <div
-      className={`${compact ? "mt-6" : "mt-8"} border-l-2 border-cyan-500 bg-slate-50 px-5 py-4`}
+      className={`${
+        compact ? "mt-6" : "mt-8"
+      } border-l-2 border-cyan-500 bg-slate-50 px-5 py-4`}
     >
       {contenido}
     </div>
@@ -256,7 +269,10 @@ function ImagenesOpcionales({
   return (
     <div className="mt-8 grid gap-5 sm:grid-cols-2">
       {imagenes.map((imagen) => (
-        <figure key={imagen.id} className="overflow-hidden border border-slate-200 bg-slate-100">
+        <figure
+          key={imagen.id}
+          className="overflow-hidden border border-slate-200 bg-slate-100"
+        >
           <Image
             src={imagen.url}
             alt={imagen.alt || seccion.titulo}
@@ -264,6 +280,7 @@ function ImagenesOpcionales({
             height={700}
             className="h-auto w-full object-cover"
           />
+
           {imagen.principal && (
             <figcaption className="border-t border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-cyan-600">
               Imagen principal
@@ -312,7 +329,11 @@ function TextoInstitucional({
         return (
           <section
             key={seccion.id}
-            className={index % 2 === 0 ? "bg-white" : "bg-slate-50"}
+            className={
+              index % 2 === 0
+                ? "bg-white"
+                : "bg-slate-50"
+            }
           >
             <div className="mx-auto max-w-7xl px-6 py-16 sm:py-20">
               <div className="max-w-4xl">
@@ -367,11 +388,11 @@ function Equipo({
   for (const seccion of secciones) {
     const config = configuracion(seccion);
 
-    if (config.tipo !== "PERSONA") {
-      continue;
-    }
-
-    if (Array.isArray(config.personas) && config.personas.length > 0) {
+    if (
+      config.tipo === "PERSONA" &&
+      Array.isArray(config.personas) &&
+      config.personas.length > 0
+    ) {
       for (const persona of config.personas) {
         personas.push({
           id: `${seccion.id}-${persona.id}`,
@@ -379,37 +400,125 @@ function Equipo({
           contenido: persona.contenido,
           rol: persona.rol,
           imagenUrl: persona.imagenUrl,
-          imagenAlt: persona.imagenAlt || persona.nombre,
-          destacado: config.destacado === true && personas.length === 0,
+          imagenAlt:
+            persona.imagenAlt || persona.nombre,
+          destacado:
+            config.destacado === true &&
+            personas.length === 0,
         });
       }
-    } else {
+
+      continue;
+    }
+
+    if (config.tipo === "PERSONA") {
       const imagen = imagenPrincipal(seccion);
+
       personas.push({
         id: String(seccion.id),
         titulo: seccion.titulo,
         contenido: seccion.contenido ?? "",
-        rol: config.rol || "Integrante de la Subcomisión de Uroginecología",
+        rol:
+          config.rol ||
+          "Integrante de la Subcomisión de Uroginecología",
         imagenUrl: imagen?.url ?? "",
-        imagenAlt: imagen?.alt || seccion.titulo,
+        imagenAlt:
+          imagen?.alt || seccion.titulo,
         destacado: config.destacado === true,
+      });
+
+      continue;
+    }
+
+    if (
+      config.tipo === "TEXTO" &&
+      tieneImagen(seccion)
+    ) {
+      const imagenes = imagenesDeSeccion(seccion);
+
+      imagenes.forEach((imagen, index) => {
+        personas.push({
+          id: `${seccion.id}-${imagen.id}`,
+          titulo:
+            imagen.alt || `Integrante ${index + 1}`,
+          contenido:
+            index === 0
+              ? seccion.contenido ?? ""
+              : "",
+          rol:
+            index === 0
+              ? "Coordinación"
+              : "Integrante del equipo de investigación",
+          imagenUrl: imagen.url,
+          imagenAlt:
+            imagen.alt || seccion.titulo,
+          destacado: index === 0,
+        });
       });
     }
   }
 
   const destacada =
-    personas.find((persona) => persona.destacado) ?? personas[0];
+    personas.find(
+      (persona) => persona.destacado,
+    ) ?? personas[0];
 
   const integrantes = personas.filter(
-    (persona) => persona.id !== destacada?.id,
+    (persona) =>
+      persona.id !== destacada?.id,
   );
 
   return (
     <main className="bg-white">
+      {secciones.some(
+        (seccion) =>
+          configuracion(seccion).tipo === "TEXTO" &&
+          tieneImagen(seccion),
+      ) && (
+        <section className="mx-auto max-w-7xl px-6 pt-16 sm:pt-20">
+          {secciones
+            .filter(
+              (seccion) =>
+                configuracion(seccion).tipo ===
+                  "TEXTO" &&
+                tieneImagen(seccion),
+            )
+            .map((seccion) => {
+              const config =
+                configuracion(seccion);
+
+              return (
+                <div
+                  key={seccion.id}
+                  className="max-w-4xl"
+                >
+                  {config.etiqueta && (
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-600">
+                      {config.etiqueta}
+                    </p>
+                  )}
+
+                  {config.descripcion && (
+                    <p className="mt-5 text-lg leading-8 text-slate-600">
+                      {config.descripcion}
+                    </p>
+                  )}
+
+                  {seccion.contenido && (
+                    <p className="mt-5 whitespace-pre-line text-base leading-8 text-slate-700">
+                      {seccion.contenido}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+        </section>
+      )}
+
       {destacada && (
         <section className="mx-auto max-w-7xl px-6 py-20 sm:py-24">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            {"Coordinación"}
+            {destacada.rol || "Coordinación"}
           </p>
 
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
@@ -421,7 +530,10 @@ function Equipo({
               <div className="relative aspect-[4/5] bg-slate-200 md:aspect-auto md:min-h-[500px]">
                 <Image
                   src={destacada.imagenUrl}
-                  alt={destacada.imagenAlt || destacada.titulo}
+                  alt={
+                    destacada.imagenAlt ||
+                    destacada.titulo
+                  }
                   fill
                   sizes="(max-width: 768px) 100vw, 400px"
                   className="object-cover"
@@ -468,7 +580,10 @@ function Equipo({
                     <div className="relative aspect-[4/5] overflow-hidden bg-slate-200">
                       <Image
                         src={integrante.imagenUrl}
-                        alt={integrante.imagenAlt || integrante.titulo}
+                        alt={
+                          integrante.imagenAlt ||
+                          integrante.titulo
+                        }
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                         className="object-cover transition-transform duration-700 hover:scale-[1.02]"
@@ -478,11 +593,14 @@ function Equipo({
 
                   <div className="pt-5">
                     <div className="mb-3 h-px w-8 bg-cyan-500" />
+
                     <h3 className="text-lg font-semibold text-slate-950">
                       {integrante.titulo}
                     </h3>
+
                     <p className="mt-2 text-sm text-slate-500">
-                      {integrante.rol || "Integrante de la Subcomisión de Uroginecología"}
+                      {integrante.rol ||
+                        "Integrante de la Subcomisión de Uroginecología"}
                     </p>
                   </div>
                 </article>
@@ -503,13 +621,16 @@ function Listado({
   tipo: "TRATAMIENTO" | "PATOLOGIA";
 }) {
   const [busqueda, setBusqueda] = useState("");
-  const [abiertos, setAbiertos] = useState<Set<number>>(new Set());
+  const [abiertos, setAbiertos] =
+    useState<Set<number>>(new Set());
 
   const resultados = useMemo(() => {
-    const termino = busqueda.trim().toLocaleLowerCase();
+    const termino =
+      busqueda.trim().toLocaleLowerCase();
 
     return secciones.filter((seccion) => {
       const config = configuracion(seccion);
+
       if (
         config.tipo &&
         config.tipo !== tipo
@@ -539,11 +660,13 @@ function Listado({
   const toggle = (id: number) => {
     setAbiertos((actuales) => {
       const nuevas = new Set(actuales);
+
       if (nuevas.has(id)) {
         nuevas.delete(id);
       } else {
         nuevas.add(id);
       }
+
       return nuevas;
     });
   };
@@ -559,75 +682,108 @@ function Listado({
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
           Buscar contenido
         </p>
+
         <input
           type="search"
           value={busqueda}
-          onChange={(event) => setBusqueda(event.target.value)}
-          placeholder={`Buscar ${tipo === "TRATAMIENTO" ? "tratamiento" : "patología"}...`}
+          onChange={(event) =>
+            setBusqueda(event.target.value)
+          }
+          placeholder={`Buscar ${
+            tipo === "TRATAMIENTO"
+              ? "tratamiento"
+              : "patología"
+          }...`}
           className="mt-4 h-11 w-full border border-slate-300 px-4 text-sm text-slate-900 outline-none focus:border-cyan-500"
         />
+
         <p className="mt-3 text-xs text-slate-400">
-          {resultados.length} {resultados.length === 1 ? "resultado" : "resultados"}
+          {resultados.length}{" "}
+          {resultados.length === 1
+            ? "resultado"
+            : "resultados"}
         </p>
       </div>
 
       <div className="mt-8">
         {resultados.map((seccion, index) => {
-          const config = configuracion(seccion);
-          const abierto = abiertos.has(seccion.id);
+          const config =
+            configuracion(seccion);
+          const abierto =
+            abiertos.has(seccion.id);
 
           return (
             <div key={seccion.id}>
               {index > 0 && <WaveDivider />}
+
               <article className="py-12 first:pt-6">
                 <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-600">
-                      {config.etiqueta || etiqueta}
+                      {config.etiqueta ||
+                        etiqueta}
                     </p>
+
                     <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
                       {seccion.titulo}
                     </h2>
+
                     {config.descripcion && (
                       <p className="mt-5 text-base leading-8 text-slate-600">
                         {config.descripcion}
                       </p>
                     )}
-                    {abierto && seccion.contenido && (
-                      <div className="mt-8 border-t border-slate-200 pt-8">
-                        <p className="whitespace-pre-line text-base leading-8 text-slate-700">
-                          {seccion.contenido}
-                        </p>
-                        <ImagenesOpcionales seccion={seccion} />
-                        <Fuente seccion={seccion} />
-                      </div>
-                    )}
+
+                    {abierto &&
+                      seccion.contenido && (
+                        <div className="mt-8 border-t border-slate-200 pt-8">
+                          <p className="whitespace-pre-line text-base leading-8 text-slate-700">
+                            {seccion.contenido}
+                          </p>
+
+                          <ImagenesOpcionales
+                            seccion={seccion}
+                          />
+
+                          <Fuente
+                            seccion={seccion}
+                          />
+                        </div>
+                      )}
                   </div>
 
                   <div className="lg:flex lg:items-start lg:justify-end">
                     <button
                       type="button"
-                      onClick={() => toggle(seccion.id)}
+                      onClick={() =>
+                        toggle(seccion.id)
+                      }
                       aria-expanded={abierto}
                       className="inline-flex h-11 items-center justify-center border border-slate-300 px-5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-700 transition-all hover:border-cyan-500 hover:bg-cyan-500 hover:text-white"
                     >
-                      {abierto ? "Cerrar artículo" : "Leer más"}
+                      {abierto
+                        ? "Cerrar artículo"
+                        : "Leer más"}
                     </button>
                   </div>
                 </div>
 
-                {!abierto && palabrasClave(seccion).length > 0 && (
-                  <div className="mt-8 flex flex-wrap gap-2">
-                    {palabrasClave(seccion).slice(0, 6).map((palabra) => (
-                      <span
-                        key={palabra}
-                        className="border border-slate-200 px-3 py-1.5 text-[11px] uppercase tracking-wide text-slate-500"
-                      >
-                        {palabra}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                {!abierto &&
+                  palabrasClave(seccion)
+                    .length > 0 && (
+                    <div className="mt-8 flex flex-wrap gap-2">
+                      {palabrasClave(seccion)
+                        .slice(0, 6)
+                        .map((palabra) => (
+                          <span
+                            key={palabra}
+                            className="border border-slate-200 px-3 py-1.5 text-[11px] uppercase tracking-wide text-slate-500"
+                          >
+                            {palabra}
+                          </span>
+                        ))}
+                    </div>
+                  )}
               </article>
             </div>
           );
@@ -642,26 +798,43 @@ function Recursos({
 }: {
   secciones: SeccionPublica[];
 }) {
-  const [busqueda, setBusqueda] = useState("");
-  const [categoria, setCategoria] = useState("Todos");
-  const [abiertos, setAbiertos] = useState<Set<number>>(new Set());
+  const [busqueda, setBusqueda] =
+    useState("");
+  const [categoria, setCategoria] =
+    useState("Todos");
+  const [abiertos, setAbiertos] =
+    useState<Set<number>>(new Set());
 
   const categorias = useMemo(() => {
     const valores = secciones
-      .map((seccion) => configuracion(seccion).categoria)
-      .filter((valor): valor is string => Boolean(valor));
+      .map(
+        (seccion) =>
+          configuracion(seccion)
+            .categoria,
+      )
+      .filter(
+        (valor): valor is string =>
+          Boolean(valor),
+      );
 
-    return ["Todos", ...Array.from(new Set(valores))];
+    return [
+      "Todos",
+      ...Array.from(new Set(valores)),
+    ];
   }, [secciones]);
 
   const resultados = useMemo(() => {
-    const termino = busqueda.trim().toLocaleLowerCase();
+    const termino =
+      busqueda.trim().toLocaleLowerCase();
 
     return secciones.filter((seccion) => {
-      const config = configuracion(seccion);
+      const config =
+        configuracion(seccion);
+
       const coincideCategoria =
         categoria === "Todos" ||
-        config.categoria === categoria;
+        config.categoria ===
+          categoria;
 
       if (!coincideCategoria) {
         return false;
@@ -685,16 +858,22 @@ function Recursos({
 
       return texto.includes(termino);
     });
-  }, [busqueda, categoria, secciones]);
+  }, [
+    busqueda,
+    categoria,
+    secciones,
+  ]);
 
   const toggle = (id: number) => {
     setAbiertos((actuales) => {
       const nuevas = new Set(actuales);
+
       if (nuevas.has(id)) {
         nuevas.delete(id);
       } else {
         nuevas.add(id);
       }
+
       return nuevas;
     });
   };
@@ -705,18 +884,25 @@ function Recursos({
         <input
           type="search"
           value={busqueda}
-          onChange={(event) => setBusqueda(event.target.value)}
+          onChange={(event) =>
+            setBusqueda(event.target.value)
+          }
           placeholder="Buscar recurso..."
           className="h-11 w-full border border-slate-300 px-4 text-sm text-slate-900 outline-none focus:border-cyan-500"
         />
 
         <select
           value={categoria}
-          onChange={(event) => setCategoria(event.target.value)}
+          onChange={(event) =>
+            setCategoria(event.target.value)
+          }
           className="h-11 border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-cyan-500"
         >
           {categorias.map((item) => (
-            <option key={item} value={item}>
+            <option
+              key={item}
+              value={item}
+            >
               {item}
             </option>
           ))}
@@ -724,16 +910,25 @@ function Recursos({
       </div>
 
       <p className="mt-3 text-xs text-slate-400">
-        {resultados.length} {resultados.length === 1 ? "recurso encontrado" : "recursos encontrados"}
+        {resultados.length}{" "}
+        {resultados.length === 1
+          ? "recurso encontrado"
+          : "recursos encontrados"}
       </p>
 
       <div className="mt-8 divide-y divide-slate-200 border-y border-slate-200">
         {resultados.map((seccion) => {
-          const config = configuracion(seccion);
-          const abierto = abiertos.has(seccion.id);
+          const config =
+            configuracion(seccion);
+
+          const abierto =
+            abiertos.has(seccion.id);
 
           return (
-            <article key={seccion.id} className="py-10">
+            <article
+              key={seccion.id}
+              className="py-10"
+            >
               <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-4xl">
                   {config.categoria && (
@@ -741,9 +936,11 @@ function Recursos({
                       {config.categoria}
                     </p>
                   )}
+
                   <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
                     {seccion.titulo}
                   </h2>
+
                   {config.descripcion && (
                     <p className="mt-5 text-base leading-8 text-slate-600">
                       {config.descripcion}
@@ -753,11 +950,15 @@ function Recursos({
 
                 <button
                   type="button"
-                  onClick={() => toggle(seccion.id)}
+                  onClick={() =>
+                    toggle(seccion.id)
+                  }
                   aria-expanded={abierto}
                   className="inline-flex h-11 shrink-0 items-center justify-center border border-slate-300 px-5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-700 transition-all hover:border-cyan-500 hover:bg-cyan-500 hover:text-white"
                 >
-                  {abierto ? "Cerrar artículo" : "Leer más"}
+                  {abierto
+                    ? "Cerrar artículo"
+                    : "Leer más"}
                 </button>
               </div>
 
@@ -768,8 +969,14 @@ function Recursos({
                       {seccion.contenido}
                     </p>
                   )}
-                  <ImagenesOpcionales seccion={seccion} />
-                  <Fuente seccion={seccion} />
+
+                  <ImagenesOpcionales
+                    seccion={seccion}
+                  />
+
+                  <Fuente
+                    seccion={seccion}
+                  />
                 </div>
               )}
             </article>
@@ -782,7 +989,10 @@ function Recursos({
 
 function WaveDivider() {
   return (
-    <div className="flex h-10 items-center justify-center" aria-hidden="true">
+    <div
+      className="flex h-10 items-center justify-center"
+      aria-hidden="true"
+    >
       <svg
         viewBox="0 0 400 32"
         className="h-8 w-full max-w-md text-cyan-500"
@@ -803,9 +1013,14 @@ export default function ContenidoPaginaClient({
   paginaSlug,
   vista,
 }: ContenidoPaginaClientProps) {
-  const [secciones, setSecciones] = useState<SeccionPublica[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState(false);
+  const [secciones, setSecciones] =
+    useState<SeccionPublica[]>([]);
+
+  const [cargando, setCargando] =
+    useState(true);
+
+  const [error, setError] =
+    useState(false);
 
   useEffect(() => {
     let activo = true;
@@ -813,7 +1028,9 @@ export default function ContenidoPaginaClient({
     const cargar = async () => {
       try {
         const response = await fetch(
-          `/api/contenido/${encodeURIComponent(paginaSlug)}`,
+          `/api/contenido/${encodeURIComponent(
+            paginaSlug,
+          )}`,
           {
             method: "GET",
             cache: "no-store",
@@ -821,16 +1038,21 @@ export default function ContenidoPaginaClient({
         );
 
         if (!response.ok) {
-          throw new Error("No se pudo cargar el contenido.");
+          throw new Error(
+            "No se pudo cargar el contenido.",
+          );
         }
 
-        const data = (await response.json()) as {
-          secciones?: SeccionPublica[];
-        };
+        const data =
+          (await response.json()) as {
+            secciones?: SeccionPublica[];
+          };
 
         if (activo) {
           setSecciones(
-            Array.isArray(data.secciones)
+            Array.isArray(
+              data.secciones,
+            )
               ? data.secciones
               : [],
           );
@@ -853,8 +1075,15 @@ export default function ContenidoPaginaClient({
     };
   }, [paginaSlug]);
 
-  const cabecera = obtenerCabecera(secciones);
-  const items = obtenerItems(secciones);
+  const cabecera =
+    obtenerCabecera(secciones);
+
+  const items =
+    obtenerItems(secciones);
+
+  const investigadoresSinCabecera =
+    vista === "INVESTIGADORES" &&
+    !cabecera;
 
   if (cargando) {
     return (
@@ -868,19 +1097,26 @@ export default function ContenidoPaginaClient({
     );
   }
 
-  if (error || !cabecera) {
+  if (
+    error ||
+    (!cabecera &&
+      !investigadoresSinCabecera)
+  ) {
     return (
       <main className="min-h-[70vh] bg-white">
         <div className="mx-auto max-w-7xl px-6 py-24">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
             Contenido
           </p>
+
           <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">
             Esta página todavía no tiene contenido administrable.
           </h1>
+
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
             Creá una cabecera desde el panel de administración para comenzar a editar esta página.
           </p>
+
           <Link
             href="/dashboard/contenido/secciones"
             className="mt-8 inline-flex h-11 items-center justify-center bg-slate-950 px-5 text-sm font-semibold text-white"
@@ -892,29 +1128,50 @@ export default function ContenidoPaginaClient({
     );
   }
 
+  if (investigadoresSinCabecera) {
+    return (
+      <Equipo secciones={secciones} />
+    );
+  }
+
   return (
     <>
-      <Cabecera seccion={cabecera} />
+      {cabecera && (
+        <Cabecera
+          seccion={cabecera}
+        />
+      )}
+
       {vista === "INSTITUCION" && (
-        <TextoInstitucional secciones={items} />
+        <TextoInstitucional
+          secciones={items}
+        />
       )}
+
       {vista === "INVESTIGADORES" && (
-        <Equipo secciones={items} />
+        <Equipo
+          secciones={items}
+        />
       )}
+
       {vista === "TRATAMIENTOS" && (
         <Listado
           secciones={items}
           tipo="TRATAMIENTO"
         />
       )}
+
       {vista === "PATOLOGIAS" && (
         <Listado
           secciones={items}
           tipo="PATOLOGIA"
         />
       )}
+
       {vista === "RECURSOS" && (
-        <Recursos secciones={items} />
+        <Recursos
+          secciones={items}
+        />
       )}
     </>
   );
