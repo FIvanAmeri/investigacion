@@ -1,10 +1,6 @@
 import { redirect } from "next/navigation";
-import {
-  obtenerContenido,
-} from "@/lib/contenido";
-import {
-  obtenerSuperAdminDashboard,
-} from "@/lib/dashboard";
+import { obtenerContenido } from "@/lib/contenido";
+import { obtenerSuperAdminDashboard } from "@/lib/dashboard";
 import ContenidoPanel from "@/app/dashboard/contenido/ContenidoPanel";
 
 export default async function MenusDashboardPage() {
@@ -37,7 +33,7 @@ export default async function MenusDashboardPage() {
         <ContenidoPanel
           tipo="MENU"
           contenidosIniciales={menus}
-          padres={[]}
+          paginas={[]}
         />
       </div>
     </section>

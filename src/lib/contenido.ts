@@ -64,11 +64,9 @@ function mapearContenido(
     );
   }
 
-  const tipo = fila.tipo;
-
   return {
     id: fila.id,
-    tipo,
+    tipo: fila.tipo,
     titulo: fila.titulo,
     slug: fila.slug,
     contenido: fila.contenido,
@@ -133,9 +131,7 @@ function obtenerHref(
   contenido: ContenidoPagina,
   padre?: ContenidoPagina,
 ): string {
-  const configuracion =
-    contenido.configuracion ?? {};
-
+  const configuracion = contenido.configuracion ?? {};
   const href = configuracion.href;
 
   if (
@@ -161,31 +157,33 @@ export async function obtenerSeccionesPagina(
 ): Promise<ContenidoPagina[]> {
   const database = await getDatabase();
 
-  const filas = await database.query<ContenidoPaginaRow[]>(
-    `
-      SELECT
-        seccion.id,
-        seccion.tipo,
-        seccion.titulo,
-        seccion.slug,
-        seccion.contenido,
-        seccion.configuracion,
-        seccion.orden,
-        seccion.activo,
-        seccion.padre_id,
-        seccion.created_at,
-        seccion.updated_at
-      FROM contenido_pagina seccion
-      INNER JOIN contenido_pagina padre
-        ON padre.id = seccion.padre_id
-      WHERE seccion.tipo = 'SECCION'
-        AND seccion.activo = TRUE
-        AND padre.slug = $1
-        AND padre.tipo IN ('MENU', 'SUBMENU')
-      ORDER BY seccion.orden ASC, seccion.id ASC
-    `,
-    [paginaSlug],
-  );
+  const filas =
+    await database.query<ContenidoPaginaRow[]>(
+      `
+        SELECT
+          seccion.id,
+          seccion.tipo,
+          seccion.titulo,
+          seccion.slug,
+          seccion.contenido,
+          seccion.configuracion,
+          seccion.orden,
+          seccion.activo,
+          seccion.padre_id,
+          seccion.created_at,
+          seccion.updated_at
+        FROM contenido_pagina seccion
+        INNER JOIN contenido_pagina padre
+          ON padre.id = seccion.padre_id
+        WHERE seccion.tipo = 'SECCION'
+          AND seccion.activo = TRUE
+          AND padre.slug = $1
+          AND padre.tipo IN ('MENU', 'SUBMENU')
+          AND padre.activo = TRUE
+        ORDER BY seccion.orden ASC, seccion.id ASC
+      `,
+      [paginaSlug],
+    );
 
   return filas.map(mapearContenido);
 }
@@ -193,8 +191,7 @@ export async function obtenerSeccionesPagina(
 export async function obtenerNavegacionPublica(): Promise<
   NavegacionMenu[]
 > {
-  const contenidos =
-    await obtenerContenido();
+  const contenidos = await obtenerContenido();
 
   const menus = contenidos
     .filter(

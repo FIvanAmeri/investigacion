@@ -11,6 +11,22 @@ export type ContenidoPaginaVista =
   | "PATOLOGIAS"
   | "RECURSOS";
 
+interface ImagenPublica {
+  id: string;
+  url: string;
+  alt: string;
+  principal: boolean;
+}
+
+interface PersonaPublica {
+  id: string;
+  nombre: string;
+  rol: string;
+  contenido: string;
+  imagenUrl: string;
+  imagenAlt: string;
+}
+
 interface ConfiguracionPublica {
   tipo?:
     | "CABECERA"
@@ -26,11 +42,13 @@ interface ConfiguracionPublica {
   imagenUrl?: string;
   imagenAlt?: string;
   mostrarImagen?: boolean;
+  imagenes?: ImagenPublica[];
   fuenteNombre?: string;
   fuenteUrl?: string;
   mostrarFuente?: boolean;
   palabrasClave?: string[];
   destacado?: boolean;
+  personas?: PersonaPublica[];
 }
 
 interface SeccionPublica {
@@ -60,14 +78,51 @@ function palabrasClave(
   return Array.isArray(valores) ? valores : [];
 }
 
+function imagenesDeSeccion(
+  seccion: SeccionPublica,
+): ImagenPublica[] {
+  const config = configuracion(seccion);
+
+  if (Array.isArray(config.imagenes) && config.imagenes.length > 0) {
+    const validas = config.imagenes.filter(
+      (imagen): imagen is ImagenPublica =>
+        Boolean(imagen && typeof imagen.url === "string" && imagen.url.trim()),
+    );
+
+    if (validas.some((imagen) => imagen.principal)) {
+      return [
+        ...validas.filter((imagen) => imagen.principal),
+        ...validas.filter((imagen) => !imagen.principal),
+      ];
+    }
+
+    return validas;
+  }
+
+  if (config.mostrarImagen && config.imagenUrl?.trim()) {
+    return [
+      {
+        id: `${seccion.id}-legacy`,
+        url: config.imagenUrl,
+        alt: config.imagenAlt || seccion.titulo,
+        principal: true,
+      },
+    ];
+  }
+
+  return [];
+}
+
 function tieneImagen(
   seccion: SeccionPublica,
 ): boolean {
-  const config = configuracion(seccion);
-  return Boolean(
-    config.mostrarImagen &&
-      config.imagenUrl?.trim(),
-  );
+  return imagenesDeSeccion(seccion).length > 0;
+}
+
+function imagenPrincipal(
+  seccion: SeccionPublica,
+): ImagenPublica | undefined {
+  return imagenesDeSeccion(seccion)[0];
 }
 
 function tieneFuente(
@@ -130,8 +185,8 @@ function Cabecera({
         {tieneImagen(seccion) && (
           <div className="relative mt-10 max-w-4xl overflow-hidden border border-slate-200 bg-white">
             <Image
-              src={config.imagenUrl!}
-              alt={config.imagenAlt || seccion.titulo}
+              src={imagenPrincipal(seccion)?.url ?? ""}
+              alt={imagenPrincipal(seccion)?.alt || seccion.titulo}
               width={1400}
               height={700}
               className="h-auto w-full object-cover"
@@ -187,22 +242,55 @@ function Fuente({
   );
 }
 
+function ImagenesOpcionales({
+  seccion,
+}: {
+  seccion: SeccionPublica;
+}) {
+  const imagenes = imagenesDeSeccion(seccion);
+
+  if (imagenes.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-8 grid gap-5 sm:grid-cols-2">
+      {imagenes.map((imagen) => (
+        <figure key={imagen.id} className="overflow-hidden border border-slate-200 bg-slate-100">
+          <Image
+            src={imagen.url}
+            alt={imagen.alt || seccion.titulo}
+            width={1200}
+            height={700}
+            className="h-auto w-full object-cover"
+          />
+          {imagen.principal && (
+            <figcaption className="border-t border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-cyan-600">
+              Imagen principal
+            </figcaption>
+          )}
+        </figure>
+      ))}
+    </div>
+  );
+}
+
 function ImagenOpcional({
   seccion,
 }: {
   seccion: SeccionPublica;
 }) {
-  const config = configuracion(seccion);
+  const principal = imagenPrincipal(seccion);
 
-  if (!tieneImagen(seccion)) {
+  if (!principal) {
     return null;
   }
 
   return (
     <div className="relative mt-8 overflow-hidden border border-slate-200 bg-slate-100">
       <Image
-        src={config.imagenUrl!}
-        alt={config.imagenAlt || seccion.titulo}
+        src={principal.url}
+        alt={principal.alt || seccion.titulo}
         width={1200}
         height={700}
         className="h-auto w-full object-cover"
@@ -250,7 +338,7 @@ function TextoInstitucional({
                   </div>
                 )}
 
-                <ImagenOpcional seccion={seccion} />
+                <ImagenesOpcionales seccion={seccion} />
                 <Fuente seccion={seccion} />
               </div>
             </div>
@@ -266,16 +354,51 @@ function Equipo({
 }: {
   secciones: SeccionPublica[];
 }) {
-  const personas = secciones.filter(
-    (seccion) =>
-      configuracion(seccion).tipo === "PERSONA",
-  );
+  const personas: Array<{
+    id: string;
+    titulo: string;
+    contenido: string;
+    rol: string;
+    imagenUrl: string;
+    imagenAlt: string;
+    destacado: boolean;
+  }> = [];
+
+  for (const seccion of secciones) {
+    const config = configuracion(seccion);
+
+    if (config.tipo !== "PERSONA") {
+      continue;
+    }
+
+    if (Array.isArray(config.personas) && config.personas.length > 0) {
+      for (const persona of config.personas) {
+        personas.push({
+          id: `${seccion.id}-${persona.id}`,
+          titulo: persona.nombre,
+          contenido: persona.contenido,
+          rol: persona.rol,
+          imagenUrl: persona.imagenUrl,
+          imagenAlt: persona.imagenAlt || persona.nombre,
+          destacado: config.destacado === true && personas.length === 0,
+        });
+      }
+    } else {
+      const imagen = imagenPrincipal(seccion);
+      personas.push({
+        id: String(seccion.id),
+        titulo: seccion.titulo,
+        contenido: seccion.contenido ?? "",
+        rol: config.rol || "Integrante de la Subcomisión de Uroginecología",
+        imagenUrl: imagen?.url ?? "",
+        imagenAlt: imagen?.alt || seccion.titulo,
+        destacado: config.destacado === true,
+      });
+    }
+  }
 
   const destacada =
-    personas.find(
-      (persona) =>
-        configuracion(persona).destacado,
-    ) ?? personas[0];
+    personas.find((persona) => persona.destacado) ?? personas[0];
 
   const integrantes = personas.filter(
     (persona) => persona.id !== destacada?.id,
@@ -286,7 +409,7 @@ function Equipo({
       {destacada && (
         <section className="mx-auto max-w-7xl px-6 py-20 sm:py-24">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            {configuracion(destacada).etiqueta || "Coordinación"}
+            {"Coordinación"}
           </p>
 
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
@@ -294,11 +417,11 @@ function Equipo({
           </h2>
 
           <article className="mt-10 grid overflow-hidden border border-slate-200 bg-slate-50 md:grid-cols-[400px_1fr]">
-            {tieneImagen(destacada) && (
+            {destacada.imagenUrl && (
               <div className="relative aspect-[4/5] bg-slate-200 md:aspect-auto md:min-h-[500px]">
                 <Image
-                  src={configuracion(destacada).imagenUrl!}
-                  alt={configuracion(destacada).imagenAlt || destacada.titulo}
+                  src={destacada.imagenUrl}
+                  alt={destacada.imagenAlt || destacada.titulo}
                   fill
                   sizes="(max-width: 768px) 100vw, 400px"
                   className="object-cover"
@@ -309,7 +432,7 @@ function Equipo({
             <div className="flex items-center p-8 sm:p-12 lg:p-16">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-600">
-                  {configuracion(destacada).rol || "Integrante"}
+                  {destacada.rol || "Integrante"}
                 </p>
 
                 <h3 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
@@ -321,8 +444,6 @@ function Equipo({
                     {destacada.contenido}
                   </p>
                 )}
-
-                <Fuente seccion={destacada} />
               </div>
             </div>
           </article>
@@ -343,11 +464,11 @@ function Equipo({
             <div className="mt-12 grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-4">
               {integrantes.map((integrante) => (
                 <article key={integrante.id}>
-                  {tieneImagen(integrante) && (
+                  {integrante.imagenUrl && (
                     <div className="relative aspect-[4/5] overflow-hidden bg-slate-200">
                       <Image
-                        src={configuracion(integrante).imagenUrl!}
-                        alt={configuracion(integrante).imagenAlt || integrante.titulo}
+                        src={integrante.imagenUrl}
+                        alt={integrante.imagenAlt || integrante.titulo}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                         className="object-cover transition-transform duration-700 hover:scale-[1.02]"
@@ -361,7 +482,7 @@ function Equipo({
                       {integrante.titulo}
                     </h3>
                     <p className="mt-2 text-sm text-slate-500">
-                      {configuracion(integrante).rol || "Integrante de la Subcomisión de Uroginecología"}
+                      {integrante.rol || "Integrante de la Subcomisión de Uroginecología"}
                     </p>
                   </div>
                 </article>
@@ -477,7 +598,7 @@ function Listado({
                         <p className="whitespace-pre-line text-base leading-8 text-slate-700">
                           {seccion.contenido}
                         </p>
-                        <ImagenOpcional seccion={seccion} />
+                        <ImagenesOpcionales seccion={seccion} />
                         <Fuente seccion={seccion} />
                       </div>
                     )}
@@ -647,7 +768,7 @@ function Recursos({
                       {seccion.contenido}
                     </p>
                   )}
-                  <ImagenOpcional seccion={seccion} />
+                  <ImagenesOpcionales seccion={seccion} />
                   <Fuente seccion={seccion} />
                 </div>
               )}

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { obtenerContenido } from "@/lib/contenido";
 import { obtenerSuperAdminDashboard } from "@/lib/dashboard";
-import ContenidoPanel from "@/app/dashboard/contenido/ContenidoPanel";
+import SeccionesPanel from "./SeccionesPanel";
 
 export default async function SeccionesDashboardPage() {
   const superAdmin =
@@ -28,7 +28,8 @@ export default async function SeccionesDashboardPage() {
     })),
     ...submenus.map((submenu) => {
       const menuPadre = menus.find(
-        (menu) => menu.id === submenu.padreId,
+        (menu) =>
+          menu.id === submenu.padreId,
       );
 
       return {
@@ -36,7 +37,8 @@ export default async function SeccionesDashboardPage() {
         tipo: "SUBMENU" as const,
         titulo: submenu.titulo,
         slug: submenu.slug,
-        padreTitulo: menuPadre?.titulo ?? null,
+        padreTitulo:
+          menuPadre?.titulo ?? null,
       };
     }),
   ];
@@ -52,13 +54,13 @@ export default async function SeccionesDashboardPage() {
       </h1>
 
       <p className="mt-3 max-w-3xl text-slate-600">
-        Administrá directamente el contenido que se muestra dentro de cada página pública.
+        Administrá el contenido real de las
+        páginas públicas desde un único lugar.
       </p>
 
       <div className="mt-8">
-        <ContenidoPanel
-          tipo="SECCION"
-          contenidosIniciales={secciones}
+        <SeccionesPanel
+          seccionesIniciales={secciones}
           paginas={paginas}
         />
       </div>

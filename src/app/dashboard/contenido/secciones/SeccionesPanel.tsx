@@ -1,12 +1,66 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import {
+  FormEvent,
+  useMemo,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import type { ContenidoPagina } from "@/lib/contenido";
 
+type SeccionTipo =
+  | "CABECERA"
+  | "TEXTO"
+  | "TRATAMIENTO"
+  | "PATOLOGIA"
+  | "RECURSO"
+  | "PERSONA";
+
+interface ImagenContenido {
+  id: string;
+  url: string;
+  alt: string;
+  principal: boolean;
+}
+
+interface PersonaContenido {
+  id: string;
+  nombre: string;
+  rol: string;
+  contenido: string;
+  imagenUrl: string;
+  imagenAlt: string;
+}
+
+interface ConfiguracionSeccion {
+  tipo?: SeccionTipo;
+  etiqueta?: string;
+  descripcion?: string;
+  rol?: string;
+  categoria?: string;
+  imagenUrl?: string;
+  imagenAlt?: string;
+  mostrarImagen?: boolean;
+  imagenes?: ImagenContenido[];
+  fuenteNombre?: string;
+  fuenteUrl?: string;
+  mostrarFuente?: boolean;
+  palabrasClave?: string[];
+  destacado?: boolean;
+  personas?: PersonaContenido[];
+}
+
+interface PaginaDestino {
+  id: number;
+  tipo: "MENU" | "SUBMENU";
+  titulo: string;
+  slug: string;
+  padreTitulo: string | null;
+}
+
 interface SeccionesPanelProps {
   seccionesIniciales: ContenidoPagina[];
-  submenus: ContenidoPagina[];
+  paginas: PaginaDestino[];
 }
 
 interface Formulario {
@@ -15,84 +69,454 @@ interface Formulario {
   contenido: string;
   orden: string;
   activo: boolean;
-  padreId: string;
+  paginaId: string;
+  tipo: SeccionTipo;
+  etiqueta: string;
+  descripcion: string;
+  rol: string;
+  categoria: string;
+  imagenesActivas: boolean;
+  imagenes: ImagenContenido[];
+  fuenteActiva: boolean;
+  fuenteNombre: string;
+  fuenteUrl: string;
+  palabrasClave: string;
+  destacado: boolean;
+  personas: PersonaContenido[];
 }
 
-interface RespuestaContenido {
-  contenido?: ContenidoPagina;
-  error?: string;
+const TIPOS: Array<{
+  value: SeccionTipo;
+  label: string;
+}> = [
+  {
+    value: "CABECERA",
+    label: "Cabecera de página",
+  },
+  {
+    value: "TEXTO",
+    label: "Texto institucional",
+  },
+  {
+    value: "TRATAMIENTO",
+    label: "Tratamiento",
+  },
+  {
+    value: "PATOLOGIA",
+    label: "Patología",
+  },
+  {
+    value: "RECURSO",
+    label: "Recurso",
+  },
+  {
+    value: "PERSONA",
+    label: "Integrante / persona",
+  },
+];
+
+function esSeccionTipo(
+  valor: unknown,
+): valor is SeccionTipo {
+  return (
+    valor === "CABECERA" ||
+    valor === "TEXTO" ||
+    valor === "TRATAMIENTO" ||
+    valor === "PATOLOGIA" ||
+    valor === "RECURSO" ||
+    valor === "PERSONA"
+  );
+}
+
+function nuevoId(): string {
+  return typeof crypto !== "undefined" &&
+    "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}`;
+}
+
+function imagenVacia(
+  principal = false,
+): ImagenContenido {
+  return {
+    id: nuevoId(),
+    url: "",
+    alt: "",
+    principal,
+  };
+}
+
+function personaVacia(): PersonaContenido {
+  return {
+    id: nuevoId(),
+    nombre: "",
+    rol: "",
+    contenido: "",
+    imagenUrl: "",
+    imagenAlt: "",
+  };
+}
+
+function normalizarImagenes(
+  valor: unknown,
+): ImagenContenido[] {
+  if (!Array.isArray(valor)) {
+    return [];
+  }
+
+  return valor.flatMap(
+    (item): ImagenContenido[] => {
+      if (
+        !item ||
+        typeof item !== "object"
+      ) {
+        return [];
+      }
+
+      const objeto =
+        item as Record<string, unknown>;
+
+      const url =
+        typeof objeto.url === "string"
+          ? objeto.url
+          : "";
+
+      if (!url.trim()) {
+        return [];
+      }
+
+      return [
+        {
+          id:
+            typeof objeto.id === "string" &&
+            objeto.id
+              ? objeto.id
+              : nuevoId(),
+          url,
+          alt:
+            typeof objeto.alt === "string"
+              ? objeto.alt
+              : "",
+          principal:
+            objeto.principal === true,
+        },
+      ];
+    },
+  );
+}
+
+function normalizarPersonas(
+  valor: unknown,
+): PersonaContenido[] {
+  if (!Array.isArray(valor)) {
+    return [];
+  }
+
+  return valor.flatMap(
+    (item): PersonaContenido[] => {
+      if (
+        !item ||
+        typeof item !== "object"
+      ) {
+        return [];
+      }
+
+      const objeto =
+        item as Record<string, unknown>;
+
+      const nombre =
+        typeof objeto.nombre === "string"
+          ? objeto.nombre
+          : "";
+
+      return [
+        {
+          id:
+            typeof objeto.id === "string" &&
+            objeto.id
+              ? objeto.id
+              : nuevoId(),
+          nombre,
+          rol:
+            typeof objeto.rol === "string"
+              ? objeto.rol
+              : "",
+          contenido:
+            typeof objeto.contenido ===
+            "string"
+              ? objeto.contenido
+              : "",
+          imagenUrl:
+            typeof objeto.imagenUrl ===
+            "string"
+              ? objeto.imagenUrl
+              : "",
+          imagenAlt:
+            typeof objeto.imagenAlt ===
+            "string"
+              ? objeto.imagenAlt
+              : "",
+        },
+      ];
+    },
+  );
+}
+
+function leerConfiguracion(
+  seccion?: ContenidoPagina,
+): ConfiguracionSeccion {
+  const configuracion =
+    seccion?.configuracion ?? {};
+
+  const imagenesGuardadas =
+    normalizarImagenes(
+      configuracion.imagenes,
+    );
+
+  const imagenLegacy =
+    typeof configuracion.imagenUrl ===
+      "string" &&
+    configuracion.imagenUrl.trim()
+      ? [
+          {
+            id: nuevoId(),
+            url: configuracion.imagenUrl,
+            alt:
+              typeof configuracion.imagenAlt ===
+              "string"
+                ? configuracion.imagenAlt
+                : "",
+            principal: true,
+          },
+        ]
+      : [];
+
+  const imagenes =
+    imagenesGuardadas.length > 0
+      ? imagenesGuardadas
+      : imagenLegacy;
+
+  if (
+    imagenes.length > 0 &&
+    !imagenes.some(
+      (imagen) => imagen.principal,
+    )
+  ) {
+    imagenes[0] = {
+      ...imagenes[0],
+      principal: true,
+    };
+  }
+
+  return {
+    tipo: esSeccionTipo(
+      configuracion.tipo,
+    )
+      ? configuracion.tipo
+      : undefined,
+    etiqueta:
+      typeof configuracion.etiqueta ===
+      "string"
+        ? configuracion.etiqueta
+        : "",
+    descripcion:
+      typeof configuracion.descripcion ===
+      "string"
+        ? configuracion.descripcion
+        : "",
+    rol:
+      typeof configuracion.rol === "string"
+        ? configuracion.rol
+        : "",
+    categoria:
+      typeof configuracion.categoria ===
+      "string"
+        ? configuracion.categoria
+        : "",
+    imagenUrl:
+      imagenes[0]?.url ??
+      (typeof configuracion.imagenUrl ===
+      "string"
+        ? configuracion.imagenUrl
+        : ""),
+    imagenAlt:
+      imagenes[0]?.alt ??
+      (typeof configuracion.imagenAlt ===
+      "string"
+        ? configuracion.imagenAlt
+        : ""),
+    mostrarImagen:
+      configuracion.mostrarImagen === true ||
+      imagenes.length > 0,
+    imagenes,
+    fuenteNombre:
+      typeof configuracion.fuenteNombre ===
+      "string"
+        ? configuracion.fuenteNombre
+        : "",
+    fuenteUrl:
+      typeof configuracion.fuenteUrl ===
+      "string"
+        ? configuracion.fuenteUrl
+        : "",
+    mostrarFuente:
+      configuracion.mostrarFuente === true,
+    palabrasClave:
+      Array.isArray(
+        configuracion.palabrasClave,
+      )
+        ? configuracion.palabrasClave.filter(
+            (
+              valor,
+            ): valor is string =>
+              typeof valor === "string",
+          )
+        : [],
+    destacado:
+      configuracion.destacado === true,
+    personas: normalizarPersonas(
+      configuracion.personas,
+    ),
+  };
 }
 
 function crearFormulario(
   seccion?: ContenidoPagina,
 ): Formulario {
+  const config =
+    leerConfiguracion(seccion);
+
   return {
     titulo: seccion?.titulo ?? "",
     slug: seccion?.slug ?? "",
     contenido: seccion?.contenido ?? "",
-    orden: String(seccion?.orden ?? 1),
+    orden: String(
+      seccion?.orden ?? 1,
+    ),
     activo: seccion?.activo ?? true,
-    padreId:
+    paginaId:
       seccion?.padreId !== null &&
       seccion?.padreId !== undefined
         ? String(seccion.padreId)
         : "",
+    tipo: config.tipo ?? "TEXTO",
+    etiqueta: config.etiqueta ?? "",
+    descripcion:
+      config.descripcion ?? "",
+    rol: config.rol ?? "",
+    categoria:
+      config.categoria ?? "",
+    imagenesActivas:
+      (config.imagenes ?? []).length > 0,
+    imagenes: config.imagenes ?? [],
+    fuenteActiva:
+      config.mostrarFuente === true,
+    fuenteNombre:
+      config.fuenteNombre ?? "",
+    fuenteUrl:
+      config.fuenteUrl ?? "",
+    palabrasClave:
+      config.palabrasClave?.join(
+        ", ",
+      ) ?? "",
+    destacado:
+      config.destacado ?? false,
+    personas:
+      config.personas ?? [],
   };
 }
 
-function generarSlug(valor: string): string {
+function generarSlug(
+  valor: string,
+): string {
   return valor
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(
+      /[\u0300-\u036f]/g,
+      "",
+    )
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(
+      /[^a-z0-9]+/g,
+      "-",
+    )
+    .replace(
+      /^-+|-+$/g,
+      "",
+    );
 }
 
-async function leerRespuesta(
-  response: Response,
-): Promise<RespuestaContenido> {
-  try {
-    const data: unknown = await response.json();
+function tipoLabel(
+  tipo: SeccionTipo,
+): string {
+  return (
+    TIPOS.find(
+      (item) =>
+        item.value === tipo,
+    )?.label ?? tipo
+  );
+}
 
-    if (!data || typeof data !== "object") {
-      return {};
-    }
+function paginaLabel(
+  pagina: PaginaDestino,
+): string {
+  if (
+    pagina.tipo === "SUBMENU" &&
+    pagina.padreTitulo
+  ) {
+    return `${pagina.padreTitulo} — ${pagina.titulo}`;
+  }
 
-    const objeto = data as Record<string, unknown>;
-    const resultado: RespuestaContenido = {};
+  return pagina.titulo;
+}
 
-    if (typeof objeto.error === "string") {
-      resultado.error = objeto.error;
-    }
+function campoBase(
+  className = "",
+): string {
+  return `mt-2 w-full border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-cyan-500 ${className}`;
+}
 
-    const contenido = objeto.contenido;
-
-    if (
-      contenido &&
-      typeof contenido === "object"
-    ) {
-      resultado.contenido =
-        contenido as ContenidoPagina;
-    }
-
-    return resultado;
-  } catch {
+function leerRespuesta(
+  data: unknown,
+): {
+  contenido?: ContenidoPagina;
+  error?: string;
+} {
+  if (
+    !data ||
+    typeof data !== "object"
+  ) {
     return {};
   }
+
+  const objeto =
+    data as Record<string, unknown>;
+
+  return {
+    error:
+      typeof objeto.error === "string"
+        ? objeto.error
+        : undefined,
+    contenido:
+      objeto.contenido &&
+      typeof objeto.contenido ===
+        "object"
+        ? (objeto.contenido as ContenidoPagina)
+        : undefined,
+  };
 }
 
 export default function SeccionesPanel({
   seccionesIniciales,
-  submenus,
+  paginas,
 }: SeccionesPanelProps) {
   const router = useRouter();
 
   const [secciones, setSecciones] =
-    useState<ContenidoPagina[]>(
-      seccionesIniciales,
-    );
+    useState(seccionesIniciales);
 
   const [formulario, setFormulario] =
     useState<Formulario>(
@@ -102,14 +526,18 @@ export default function SeccionesPanel({
   const [editandoId, setEditandoId] =
     useState<number | null>(null);
 
-  const [mostrarFormulario, setMostrarFormulario] =
-    useState(false);
+  const [
+    mostrarFormulario,
+    setMostrarFormulario,
+  ] = useState(false);
 
   const [guardando, setGuardando] =
     useState(false);
 
-  const [accionandoId, setAccionandoId] =
-    useState<number | null>(null);
+  const [
+    accionandoId,
+    setAccionandoId,
+  ] = useState<number | null>(null);
 
   const [mensaje, setMensaje] =
     useState<string | null>(null);
@@ -117,21 +545,34 @@ export default function SeccionesPanel({
   const [error, setError] =
     useState<string | null>(null);
 
-  const submenusOrdenados = useMemo(
-    () =>
-      [...submenus].sort((a, b) => {
-        if (a.orden !== b.orden) {
-          return a.orden - b.orden;
-        }
+  const [
+    subiendoImagen,
+    setSubiendoImagen,
+  ] = useState(false);
 
-        return a.id - b.id;
-      }),
-    [submenus],
+  const paginasOrdenadas = useMemo(
+    () =>
+      [...paginas].sort((a, b) =>
+        paginaLabel(a).localeCompare(
+          paginaLabel(b),
+          "es",
+        ),
+      ),
+    [paginas],
   );
 
   const seccionesOrdenadas = useMemo(
     () =>
       [...secciones].sort((a, b) => {
+        if (
+          a.padreId !== b.padreId
+        ) {
+          return (
+            (a.padreId ?? 0) -
+            (b.padreId ?? 0)
+          );
+        }
+
         if (a.orden !== b.orden) {
           return a.orden - b.orden;
         }
@@ -143,7 +584,9 @@ export default function SeccionesPanel({
 
   const abrirNuevo = () => {
     setEditandoId(null);
-    setFormulario(crearFormulario());
+    setFormulario(
+      crearFormulario(),
+    );
     setMensaje(null);
     setError(null);
     setMostrarFormulario(true);
@@ -168,7 +611,21 @@ export default function SeccionesPanel({
 
     setMostrarFormulario(false);
     setEditandoId(null);
-    setFormulario(crearFormulario());
+    setFormulario(
+      crearFormulario(),
+    );
+  };
+
+  const actualizar = <
+    K extends keyof Formulario
+  >(
+    campo: K,
+    valor: Formulario[K],
+  ) => {
+    setFormulario((actual) => ({
+      ...actual,
+      [campo]: valor,
+    }));
   };
 
   const cambiarTitulo = (
@@ -181,6 +638,213 @@ export default function SeccionesPanel({
         editandoId === null
           ? generarSlug(titulo)
           : actual.slug,
+    }));
+  };
+
+  const cargarImagen = async (
+    archivo: File,
+    aplicar: (url: string) => void,
+  ) => {
+    if (
+      !archivo.type.startsWith(
+        "image/",
+      )
+    ) {
+      setError(
+        "El archivo seleccionado no es una imagen válida.",
+      );
+      return;
+    }
+
+    if (archivo.size > 5 * 1024 * 1024) {
+      setError(
+        "La imagen no puede superar los 5 MB.",
+      );
+      return;
+    }
+
+    setSubiendoImagen(true);
+    setMensaje(null);
+    setError(null);
+
+    try {
+      const formData =
+        new FormData();
+
+      formData.append(
+        "file",
+        archivo,
+      );
+
+      const response = await fetch(
+        "/api/dashboard/contenido/imagen",
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
+
+      const data =
+        (await response.json()) as {
+          url?: string;
+          error?: string;
+        };
+
+      if (
+        !response.ok ||
+        !data.url
+      ) {
+        throw new Error(
+          data.error ??
+            "No se pudo cargar la imagen.",
+        );
+      }
+
+      aplicar(data.url);
+
+      setMensaje(
+        "Imagen cargada correctamente.",
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "No se pudo cargar la imagen.",
+      );
+    } finally {
+      setSubiendoImagen(false);
+    }
+  };
+
+  const agregarImagen = () => {
+    setFormulario((actual) => {
+      const principal =
+        actual.imagenes.length === 0;
+
+      return {
+        ...actual,
+        imagenesActivas: true,
+        imagenes: [
+          ...actual.imagenes,
+          imagenVacia(principal),
+        ],
+      };
+    });
+  };
+
+  const actualizarImagen = (
+    id: string,
+    campo: keyof Omit<
+      ImagenContenido,
+      "id"
+    >,
+    valor: string | boolean,
+  ) => {
+    setFormulario((actual) => ({
+      ...actual,
+      imagenes:
+        actual.imagenes
+          .map((imagen) => {
+            if (
+              imagen.id !== id
+            ) {
+              return imagen;
+            }
+
+            return {
+              ...imagen,
+              [campo]: valor,
+            } as ImagenContenido;
+          })
+          .map((imagen) =>
+            campo ===
+              "principal" &&
+            valor === true &&
+            imagen.id !== id
+              ? {
+                  ...imagen,
+                  principal: false,
+                }
+              : imagen,
+          ),
+    }));
+  };
+
+  const eliminarImagen = (
+    id: string,
+  ) => {
+    setFormulario((actual) => {
+      const restantes =
+        actual.imagenes.filter(
+          (imagen) =>
+            imagen.id !== id,
+        );
+
+      if (
+        restantes.length > 0 &&
+        !restantes.some(
+          (imagen) =>
+            imagen.principal,
+        )
+      ) {
+        restantes[0] = {
+          ...restantes[0],
+          principal: true,
+        };
+      }
+
+      return {
+        ...actual,
+        imagenesActivas:
+          restantes.length > 0,
+        imagenes: restantes,
+      };
+    });
+  };
+
+  const agregarPersona = () => {
+    setFormulario((actual) => ({
+      ...actual,
+      personas: [
+        ...actual.personas,
+        personaVacia(),
+      ],
+    }));
+  };
+
+  const actualizarPersona = (
+    id: string,
+    campo: keyof Omit<
+      PersonaContenido,
+      "id"
+    >,
+    valor: string,
+  ) => {
+    setFormulario((actual) => ({
+      ...actual,
+      personas:
+        actual.personas.map(
+          (persona) =>
+            persona.id === id
+              ? {
+                  ...persona,
+                  [campo]: valor,
+                }
+              : persona,
+        ),
+    }));
+  };
+
+  const eliminarPersona = (
+    id: string,
+  ) => {
+    setFormulario((actual) => ({
+      ...actual,
+      personas:
+        actual.personas.filter(
+          (persona) =>
+            persona.id !== id,
+        ),
     }));
   };
 
@@ -200,8 +864,8 @@ export default function SeccionesPanel({
       const slug =
         formulario.slug.trim();
 
-      const padreId =
-        Number(formulario.padreId);
+      const paginaId =
+        Number(formulario.paginaId);
 
       const orden =
         Number(formulario.orden);
@@ -214,16 +878,18 @@ export default function SeccionesPanel({
 
       if (!slug) {
         throw new Error(
-          "El slug es obligatorio.",
+          "El identificador interno es obligatorio.",
         );
       }
 
       if (
-        !Number.isInteger(padreId) ||
-        padreId <= 0
+        !Number.isInteger(
+          paginaId,
+        ) ||
+        paginaId < 1
       ) {
         throw new Error(
-          "Tenés que seleccionar un submenú.",
+          "Seleccioná la página donde se mostrará esta sección.",
         );
       }
 
@@ -236,18 +902,177 @@ export default function SeccionesPanel({
         );
       }
 
-      const payload = {
-        tipo: "SECCION",
-        titulo,
-        slug,
-        contenido:
-          formulario.contenido,
-        configuracion: {},
-        orden,
-        activo:
-          formulario.activo,
-        padreId,
-      };
+      const imagenes =
+        formulario.imagenes
+          .filter(
+            (imagen) =>
+              imagen.url.trim(),
+          )
+          .map((imagen) => ({
+            ...imagen,
+            url: imagen.url.trim(),
+            alt:
+              imagen.alt.trim() ||
+              titulo,
+          }));
+
+      if (
+        formulario.imagenesActivas &&
+        imagenes.length === 0
+      ) {
+        throw new Error(
+          "Agregá al menos una imagen o desactivá la opción de imágenes.",
+        );
+      }
+
+      if (
+        formulario.fuenteActiva &&
+        !formulario.fuenteNombre.trim()
+      ) {
+        throw new Error(
+          "Indicá el nombre de la fuente o desactivá la fuente.",
+        );
+      }
+
+      if (
+        imagenes.length > 0 &&
+        !imagenes.some(
+          (imagen) =>
+            imagen.principal,
+        )
+      ) {
+        imagenes[0] = {
+          ...imagenes[0],
+          principal: true,
+        };
+      }
+
+      const configuracion: ConfiguracionSeccion =
+        {
+          tipo: formulario.tipo,
+        };
+
+      if (
+        formulario.etiqueta.trim()
+      ) {
+        configuracion.etiqueta =
+          formulario.etiqueta.trim();
+      }
+
+      if (
+        formulario.descripcion.trim()
+      ) {
+        configuracion.descripcion =
+          formulario.descripcion.trim();
+      }
+
+      if (
+        formulario.tipo ===
+          "PERSONA" &&
+        formulario.rol.trim()
+      ) {
+        configuracion.rol =
+          formulario.rol.trim();
+      }
+
+      if (
+        (
+          formulario.tipo ===
+            "RECURSO" ||
+          formulario.tipo ===
+            "TRATAMIENTO" ||
+          formulario.tipo ===
+            "PATOLOGIA"
+        ) &&
+        formulario.categoria.trim()
+      ) {
+        configuracion.categoria =
+          formulario.categoria.trim();
+      }
+
+      if (imagenes.length > 0) {
+        configuracion.mostrarImagen =
+          true;
+
+        configuracion.imagenes =
+          imagenes;
+
+        const principal =
+          imagenes.find(
+            (imagen) =>
+              imagen.principal,
+          ) ?? imagenes[0];
+
+        configuracion.imagenUrl =
+          principal.url;
+
+        configuracion.imagenAlt =
+          principal.alt;
+      }
+
+      if (
+        formulario.fuenteActiva
+      ) {
+        configuracion.mostrarFuente =
+          true;
+
+        configuracion.fuenteNombre =
+          formulario.fuenteNombre.trim();
+
+        if (
+          formulario.fuenteUrl.trim()
+        ) {
+          configuracion.fuenteUrl =
+            formulario.fuenteUrl.trim();
+        }
+      }
+
+      if (
+        formulario.palabrasClave.trim()
+      ) {
+        configuracion.palabrasClave =
+          formulario.palabrasClave
+            .split(",")
+            .map((item) =>
+              item.trim(),
+            )
+            .filter(Boolean);
+      }
+
+      if (
+        formulario.tipo ===
+        "PERSONA"
+      ) {
+        configuracion.destacado =
+          formulario.destacado;
+
+        const personas =
+          formulario.personas
+            .map((persona) => ({
+              ...persona,
+              nombre:
+                persona.nombre.trim(),
+              rol:
+                persona.rol.trim(),
+              contenido:
+                persona.contenido.trim(),
+              imagenUrl:
+                persona.imagenUrl.trim(),
+              imagenAlt:
+                persona.imagenAlt.trim(),
+            }))
+            .filter(
+              (persona) =>
+                persona.nombre,
+            );
+
+        if (
+          personas.length > 0
+        ) {
+          configuracion.personas =
+            personas;
+        }
+      }
 
       const esNueva =
         editandoId === null;
@@ -264,15 +1089,24 @@ export default function SeccionesPanel({
             "Content-Type":
               "application/json",
           },
-          body: JSON.stringify(
-            payload,
-          ),
+          body: JSON.stringify({
+            tipo: "SECCION",
+            titulo,
+            slug,
+            contenido:
+              formulario.contenido,
+            configuracion,
+            orden,
+            activo:
+              formulario.activo,
+            padreId: paginaId,
+          }),
         },
       );
 
       const data =
-        await leerRespuesta(
-          response,
+        leerRespuesta(
+          await response.json(),
         );
 
       if (!response.ok) {
@@ -288,45 +1122,41 @@ export default function SeccionesPanel({
         );
       }
 
-      if (esNueva) {
-        setSecciones(
-          (actuales) => [
-            ...actuales,
-            data.contenido as ContenidoPagina,
-          ],
-        );
+      setSecciones(
+        (actuales) =>
+          esNueva
+            ? [
+                ...actuales,
+                data.contenido as ContenidoPagina,
+              ]
+            : actuales.map(
+                (item) =>
+                  item.id ===
+                  editandoId
+                    ? (data.contenido as ContenidoPagina)
+                    : item,
+              ),
+      );
 
-        setMensaje(
-          "Sección creada correctamente.",
-        );
-      } else {
-        setSecciones(
-          (actuales) =>
-            actuales.map(
-              (seccion) =>
-                seccion.id ===
-                editandoId
-                  ? data.contenido as ContenidoPagina
-                  : seccion,
-            ),
-        );
+      setMensaje(
+        esNueva
+          ? "Sección creada correctamente."
+          : "Sección actualizada correctamente.",
+      );
 
-        setMensaje(
-          "Sección actualizada correctamente.",
-        );
-      }
-
-      setMostrarFormulario(false);
+      setMostrarFormulario(
+        false,
+      );
       setEditandoId(null);
       setFormulario(
         crearFormulario(),
       );
 
       router.refresh();
-    } catch (error) {
+    } catch (caught) {
       setError(
-        error instanceof Error
-          ? error.message
+        caught instanceof Error
+          ? caught.message
           : "Ocurrió un error al guardar la sección.",
       );
     } finally {
@@ -358,25 +1188,24 @@ export default function SeccionesPanel({
       );
 
       const data =
-        await leerRespuesta(
-          response,
+        leerRespuesta(
+          await response.json(),
         );
 
       if (!response.ok) {
         throw new Error(
           data.error ??
-            "No se pudo cambiar el estado de la sección.",
+            "No se pudo cambiar el estado.",
         );
       }
 
       setSecciones(
         (actuales) =>
           actuales.map(
-            (actual) =>
-              actual.id ===
-              seccion.id
+            (item) =>
+              item.id === seccion.id
                 ? {
-                    ...actual,
+                    ...item,
                     ...(data.contenido ??
                       {}),
                     activo:
@@ -384,7 +1213,7 @@ export default function SeccionesPanel({
                         ?.activo ??
                       !seccion.activo,
                   }
-                : actual,
+                : item,
           ),
       );
 
@@ -395,10 +1224,10 @@ export default function SeccionesPanel({
       );
 
       router.refresh();
-    } catch (error) {
+    } catch (caught) {
       setError(
-        error instanceof Error
-          ? error.message
+        caught instanceof Error
+          ? caught.message
           : "Ocurrió un error al cambiar el estado.",
       );
     } finally {
@@ -431,8 +1260,8 @@ export default function SeccionesPanel({
       );
 
       const data =
-        await leerRespuesta(
-          response,
+        leerRespuesta(
+          await response.json(),
         );
 
       if (!response.ok) {
@@ -445,9 +1274,8 @@ export default function SeccionesPanel({
       setSecciones(
         (actuales) =>
           actuales.filter(
-            (actual) =>
-              actual.id !==
-              seccion.id,
+            (item) =>
+              item.id !== seccion.id,
           ),
       );
 
@@ -456,16 +1284,338 @@ export default function SeccionesPanel({
       );
 
       router.refresh();
-    } catch (error) {
+    } catch (caught) {
       setError(
-        error instanceof Error
-          ? error.message
+        caught instanceof Error
+          ? caught.message
           : "Ocurrió un error al eliminar la sección.",
       );
     } finally {
       setAccionandoId(null);
     }
   };
+
+  const necesitaCategoria =
+    formulario.tipo ===
+      "TRATAMIENTO" ||
+    formulario.tipo ===
+      "PATOLOGIA" ||
+    formulario.tipo ===
+      "RECURSO";
+
+  const esPersona =
+    formulario.tipo === "PERSONA";
+
+  const formularioEditor =
+    mostrarFormulario ? (
+      <form
+        onSubmit={guardar}
+        className="mt-6 border border-slate-200 bg-white p-6 sm:p-8"
+      >
+        <div className="flex flex-col gap-2 border-b border-slate-200 pb-6 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-600">
+              Contenido público
+            </p>
+
+            <h2 className="mt-2 text-2xl font-semibold text-slate-950">
+              {editandoId === null
+                ? "Crear sección"
+                : "Editar sección"}
+            </h2>
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              Los campos repetibles se guardan dentro de la configuración JSON de la sección.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={
+              cerrarFormulario
+            }
+            disabled={guardando}
+            className="text-sm font-semibold text-slate-500 hover:text-slate-950"
+          >
+            Cerrar
+          </button>
+        </div>
+
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-800">
+              Página
+            </span>
+
+            <select
+              value={
+                formulario.paginaId
+              }
+              onChange={(event) =>
+                actualizar(
+                  "paginaId",
+                  event.target.value,
+                )
+              }
+              className={campoBase(
+                "h-11",
+              )}
+              required
+            >
+              <option value="">
+                Seleccionar página
+              </option>
+
+              {paginasOrdenadas.map(
+                (pagina) => (
+                  <option
+                    key={pagina.id}
+                    value={pagina.id}
+                  >
+                    {paginaLabel(
+                      pagina,
+                    )}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-800">
+              Tipo de contenido
+            </span>
+
+            <select
+              value={
+                formulario.tipo
+              }
+              onChange={(event) =>
+                actualizar(
+                  "tipo",
+                  event.target
+                    .value as SeccionTipo,
+                )
+              }
+              className={campoBase(
+                "h-11",
+              )}
+            >
+              {TIPOS.map((tipo) => (
+                <option
+                  key={tipo.value}
+                  value={tipo.value}
+                >
+                  {tipo.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block lg:col-span-2">
+            <span className="text-sm font-semibold text-slate-800">
+              Título
+            </span>
+
+            <input
+              value={
+                formulario.titulo
+              }
+              onChange={(event) =>
+                cambiarTitulo(
+                  event.target.value,
+                )
+              }
+              className={campoBase(
+                "h-11",
+              )}
+              required
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-800">
+              Etiqueta
+            </span>
+
+            <input
+              value={
+                formulario.etiqueta
+              }
+              onChange={(event) =>
+                actualizar(
+                  "etiqueta",
+                  event.target.value,
+                )
+              }
+              className={campoBase(
+                "h-11",
+              )}
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-800">
+              Orden
+            </span>
+
+            <input
+              type="number"
+              min="1"
+              value={
+                formulario.orden
+              }
+              onChange={(event) =>
+                actualizar(
+                  "orden",
+                  event.target.value,
+                )
+              }
+              className={campoBase(
+                "h-11",
+              )}
+              required
+            />
+          </label>
+
+          <label className="block lg:col-span-2">
+            <span className="text-sm font-semibold text-slate-800">
+              Descripción breve
+            </span>
+
+            <textarea
+              value={
+                formulario.descripcion
+              }
+              onChange={(event) =>
+                actualizar(
+                  "descripcion",
+                  event.target.value,
+                )
+              }
+              rows={3}
+              className={campoBase(
+                "py-3",
+              )}
+            />
+          </label>
+
+          <label className="block lg:col-span-2">
+            <span className="text-sm font-semibold text-slate-800">
+              Contenido
+            </span>
+
+            <textarea
+              value={
+                formulario.contenido
+              }
+              onChange={(event) =>
+                actualizar(
+                  "contenido",
+                  event.target.value,
+                )
+              }
+              rows={10}
+              className={campoBase(
+                "py-3",
+              )}
+            />
+          </label>
+
+          {esPersona && (
+            <label className="block">
+              <span className="text-sm font-semibold text-slate-800">
+                Rol principal
+              </span>
+
+              <input
+                value={
+                  formulario.rol
+                }
+                onChange={(event) =>
+                  actualizar(
+                    "rol",
+                    event.target.value,
+                  )
+                }
+                className={campoBase(
+                  "h-11",
+                )}
+              />
+            </label>
+          )}
+
+          {necesitaCategoria && (
+            <label className="block">
+              <span className="text-sm font-semibold text-slate-800">
+                Categoría
+              </span>
+
+              <input
+                value={
+                  formulario.categoria
+                }
+                onChange={(event) =>
+                  actualizar(
+                    "categoria",
+                    event.target.value,
+                  )
+                }
+                className={campoBase(
+                  "h-11",
+                )}
+              />
+            </label>
+          )}
+
+          <label className="flex items-center gap-3 lg:col-span-2">
+            <input
+              type="checkbox"
+              checked={
+                formulario.activo
+              }
+              onChange={(event) =>
+                actualizar(
+                  "activo",
+                  event.target.checked,
+                )
+              }
+              className="h-4 w-4"
+            />
+
+            <span className="text-sm font-semibold text-slate-800">
+              Publicar esta sección
+            </span>
+          </label>
+        </div>
+
+        <div className="mt-8 flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={
+              cerrarFormulario
+            }
+            disabled={guardando}
+            className="h-11 border border-slate-300 px-5 text-sm font-semibold text-slate-700"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="submit"
+            disabled={
+              guardando ||
+              subiendoImagen
+            }
+            className="h-11 bg-cyan-500 px-6 text-sm font-semibold text-white hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {guardando
+              ? "Guardando..."
+              : "Guardar sección"}
+          </button>
+        </div>
+      </form>
+    ) : null;
 
   return (
     <div>
@@ -498,299 +1648,127 @@ export default function SeccionesPanel({
         </div>
       )}
 
-      {mostrarFormulario && (
-        <div className="mt-6 border border-slate-200 bg-white p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-950">
-                {editandoId === null
-                  ? "Nueva sección"
-                  : "Editar sección"}
-              </h2>
+      {editandoId === null &&
+        formularioEditor}
 
-              <p className="mt-1 text-sm text-slate-500">
-                La sección quedará asociada al
-                submenú seleccionado.
-              </p>
-            </div>
+      <div className="mt-8 space-y-4">
+        {seccionesOrdenadas.map(
+          (seccion) => {
+            const config =
+              leerConfiguracion(
+                seccion,
+              );
 
-            <button
-              type="button"
-              onClick={cerrarFormulario}
-              disabled={guardando}
-              className="text-sm font-medium text-slate-500 hover:text-slate-950 disabled:opacity-50"
-            >
-              Cancelar
-            </button>
-          </div>
+            const pagina =
+              paginas.find(
+                (item) =>
+                  item.id ===
+                  seccion.padreId,
+              );
 
-          <form
-            onSubmit={guardar}
-            className="mt-6 space-y-5"
-          >
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <label
-                  htmlFor="seccion-titulo"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Título
-                </label>
-
-                <input
-                  id="seccion-titulo"
-                  value={formulario.titulo}
-                  onChange={(event) =>
-                    cambiarTitulo(
-                      event.target.value,
-                    )
-                  }
-                  className="h-11 w-full border border-slate-300 px-4 text-sm text-slate-900 outline-none focus:border-cyan-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="seccion-slug"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Slug
-                </label>
-
-                <input
-                  id="seccion-slug"
-                  value={formulario.slug}
-                  onChange={(event) =>
-                    setFormulario(
-                      (actual) => ({
-                        ...actual,
-                        slug: event.target.value,
-                      }),
-                    )
-                  }
-                  className="h-11 w-full border border-slate-300 px-4 text-sm text-slate-900 outline-none focus:border-cyan-500"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label
-                htmlFor="seccion-padre"
-                className="mb-2 block text-sm font-medium text-slate-700"
+            return (
+              <div
+                key={seccion.id}
               >
-                Submenú padre
-              </label>
-
-              <select
-                id="seccion-padre"
-                value={
-                  formulario.padreId
-                }
-                onChange={(event) =>
-                  setFormulario(
-                    (actual) => ({
-                      ...actual,
-                      padreId:
-                        event.target.value,
-                    }),
-                  )
-                }
-                className="h-11 w-full border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-cyan-500"
-                required
-              >
-                <option value="">
-                  Seleccionar submenú...
-                </option>
-
-                {submenusOrdenados.map(
-                  (submenu) => (
-                    <option
-                      key={submenu.id}
-                      value={submenu.id}
-                    >
-                      {submenu.titulo}
-                    </option>
-                  ),
-                )}
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="seccion-contenido"
-                className="mb-2 block text-sm font-medium text-slate-700"
-              >
-                Contenido
-              </label>
-
-              <textarea
-                id="seccion-contenido"
-                value={
-                  formulario.contenido
-                }
-                onChange={(event) =>
-                  setFormulario(
-                    (actual) => ({
-                      ...actual,
-                      contenido:
-                        event.target.value,
-                    }),
-                  )
-                }
-                rows={12}
-                className="w-full resize-y border border-slate-300 px-4 py-3 text-sm leading-7 text-slate-900 outline-none focus:border-cyan-500"
-                placeholder="Ingresá el contenido de la sección..."
-              />
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <label
-                  htmlFor="seccion-orden"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Orden
-                </label>
-
-                <input
-                  id="seccion-orden"
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={
-                    formulario.orden
-                  }
-                  onChange={(event) =>
-                    setFormulario(
-                      (actual) => ({
-                        ...actual,
-                        orden:
-                          event.target.value,
-                      }),
-                    )
-                  }
-                  className="h-11 w-full border border-slate-300 px-4 text-sm text-slate-900 outline-none focus:border-cyan-500"
-                  required
-                />
-              </div>
-
-              <label className="flex h-11 items-center gap-3 self-end border border-slate-300 px-4 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={
-                    formulario.activo
-                  }
-                  onChange={(event) =>
-                    setFormulario(
-                      (actual) => ({
-                        ...actual,
-                        activo:
-                          event.target
-                            .checked,
-                      }),
-                    )
-                  }
-                  className="h-4 w-4"
-                />
-
-                Sección activa
-              </label>
-            </div>
-
-            <div className="flex justify-end gap-3 border-t border-slate-200 pt-5">
-              <button
-                type="button"
-                onClick={cerrarFormulario}
-                disabled={guardando}
-                className="h-11 border border-slate-300 px-5 text-sm font-medium text-slate-700 hover:border-slate-500 disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-
-              <button
-                type="submit"
-                disabled={guardando}
-                className="h-11 bg-cyan-600 px-6 text-sm font-semibold text-white hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {guardando
-                  ? "Guardando..."
-                  : editandoId === null
-                    ? "Crear sección"
-                    : "Guardar cambios"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      <div className="mt-6 overflow-hidden border border-slate-200 bg-white">
-        {seccionesOrdenadas.length ===
-        0 ? (
-          <div className="px-6 py-12 text-center">
-            <p className="text-sm text-slate-500">
-              No hay secciones creadas.
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-200">
-            {seccionesOrdenadas.map(
-              (seccion) => {
-                const submenu =
-                  submenus.find(
-                    (item) =>
-                      item.id ===
-                      seccion.padreId,
-                  );
-
-                const accionando =
-                  accionandoId ===
-                  seccion.id;
-
-                return (
-                  <div
-                    key={seccion.id}
-                    className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between"
-                  >
+                <article className="border border-slate-200 bg-white p-5 sm:p-6">
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-semibold text-slate-950">
-                          {seccion.titulo}
-                        </h3>
+                        <span className="border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-cyan-700">
+                          {tipoLabel(
+                            config.tipo ??
+                              "TEXTO",
+                          )}
+                        </span>
 
                         <span
-                          className={`border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider ${
+                          className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${
                             seccion.activo
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                              : "border-slate-200 bg-slate-50 text-slate-500"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-slate-100 text-slate-500"
                           }`}
                         >
                           {seccion.activo
-                            ? "Activa"
-                            : "Inactiva"}
+                            ? "Publicado"
+                            : "Oculto"}
                         </span>
                       </div>
 
+                      <h3 className="mt-3 text-xl font-semibold text-slate-950">
+                        {seccion.titulo}
+                      </h3>
+
                       <p className="mt-1 text-sm text-slate-500">
-                        /{seccion.slug}
+                        Página:{" "}
+                        {pagina
+                          ? paginaLabel(
+                              pagina,
+                            )
+                          : "Sin página asignada"}
                       </p>
 
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+                      {config.descripcion && (
+                        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+                          {
+                            config.descripcion
+                          }
+                        </p>
+                      )}
+
+                      {seccion.contenido && (
+                        <p className="mt-3 max-w-3xl whitespace-pre-line text-sm leading-6 text-slate-500">
+                          {seccion.contenido.length >
+                          280
+                            ? `${seccion.contenido.slice(
+                                0,
+                                280,
+                              )}…`
+                            : seccion.contenido}
+                        </p>
+                      )}
+
+                      <div className="mt-4 flex flex-wrap gap-3 text-xs text-slate-400">
                         <span>
-                          Submenú:{" "}
-                          {submenu?.titulo ??
-                            "No disponible"}
+                          Orden{" "}
+                          {
+                            seccion.orden
+                          }
                         </span>
 
-                        <span>
-                          Orden:{" "}
-                          {seccion.orden}
-                        </span>
+                        {config.personas &&
+                          config.personas
+                            .length >
+                            0 && (
+                            <span>
+                              {
+                                config
+                                  .personas
+                                  .length
+                              }{" "}
+                              {config
+                                .personas
+                                .length ===
+                              1
+                                ? "integrante"
+                                : "integrantes"}
+                            </span>
+                          )}
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          abrirEditar(
+                            seccion,
+                          )
+                        }
+                        className="h-10 border border-slate-300 px-4 text-xs font-semibold uppercase tracking-wide text-slate-700 hover:border-cyan-500 hover:text-cyan-600"
+                      >
+                        Editar
+                      </button>
+
                       <button
                         type="button"
                         onClick={() =>
@@ -799,28 +1777,14 @@ export default function SeccionesPanel({
                           )
                         }
                         disabled={
-                          accionando
+                          accionandoId ===
+                          seccion.id
                         }
-                        className="h-9 border border-slate-300 px-3 text-xs font-semibold text-slate-700 hover:border-cyan-500 hover:text-cyan-600 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="h-10 border border-slate-300 px-4 text-xs font-semibold uppercase tracking-wide text-slate-700 hover:border-cyan-500 hover:text-cyan-600 disabled:opacity-50"
                       >
                         {seccion.activo
-                          ? "Desactivar"
-                          : "Activar"}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          abrirEditar(
-                            seccion,
-                          )
-                        }
-                        disabled={
-                          accionando
-                        }
-                        className="h-9 border border-slate-300 px-3 text-xs font-semibold text-slate-700 hover:border-cyan-500 hover:text-cyan-600 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Editar
+                          ? "Ocultar"
+                          : "Publicar"}
                       </button>
 
                       <button
@@ -831,22 +1795,41 @@ export default function SeccionesPanel({
                           )
                         }
                         disabled={
-                          accionando
+                          accionandoId ===
+                          seccion.id
                         }
-                        className="h-9 border border-red-200 px-3 text-xs font-semibold text-red-600 hover:border-red-400 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="h-10 border border-red-200 px-4 text-xs font-semibold uppercase tracking-wide text-red-600 hover:bg-red-50 disabled:opacity-50"
                       >
-                        {accionando
-                          ? "Procesando..."
-                          : "Eliminar"}
+                        Eliminar
                       </button>
                     </div>
                   </div>
-                );
-              },
-            )}
-          </div>
+                </article>
+
+                {editandoId ===
+                  seccion.id &&
+                  formularioEditor}
+              </div>
+            );
+          },
         )}
       </div>
+
+      {secciones.length === 0 &&
+        !mostrarFormulario && (
+          <div className="mt-8 border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
+            <h2 className="text-lg font-semibold text-slate-950">
+              Todavía no hay secciones
+            </h2>
+
+            <p className="mt-2 text-sm text-slate-500">
+              Creá la primera sección
+              para comenzar a
+              administrar el
+              contenido público.
+            </p>
+          </div>
+        )}
     </div>
   );
 }

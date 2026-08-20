@@ -76,7 +76,10 @@ export async function PATCH(
   const { id } = await context.params;
   const contenidoId = Number(id);
 
-  if (!Number.isInteger(contenidoId) || contenidoId < 1) {
+  if (
+    !Number.isInteger(contenidoId) ||
+    contenidoId < 1
+  ) {
     return NextResponse.json(
       { error: "ID inválido." },
       { status: 400 },
@@ -170,7 +173,10 @@ export async function PATCH(
       body.orden < 1)
   ) {
     return NextResponse.json(
-      { error: "El orden debe ser un entero mayor o igual a 1." },
+      {
+        error:
+          "El orden debe ser un entero mayor o igual a 1.",
+      },
       { status: 400 },
     );
   }
@@ -244,7 +250,10 @@ export async function PATCH(
 
     if (slugExistente[0]) {
       return NextResponse.json(
-        { error: "Ya existe un contenido con ese slug." },
+        {
+          error:
+            "Ya existe un contenido con ese slug.",
+        },
         { status: 409 },
       );
     }
@@ -313,30 +322,22 @@ export async function PATCH(
         `
           UPDATE contenido_pagina
           SET
-            titulo =
-              COALESCE($1, titulo),
-            slug =
-              COALESCE($2, slug),
+            titulo = COALESCE($1, titulo),
+            slug = COALESCE($2, slug),
             contenido =
               CASE
-                WHEN $3::boolean = true
-                  THEN $4
+                WHEN $3::boolean = true THEN $4
                 ELSE contenido
               END,
             configuracion =
               CASE
-                WHEN $5::boolean = true
-                  THEN $6
+                WHEN $5::boolean = true THEN $6
                 ELSE configuracion
               END,
-            orden =
-              COALESCE($7, orden),
-            activo =
-              COALESCE($8, activo),
-            padre_id =
-              $9,
-            updated_at =
-              NOW()
+            orden = COALESCE($7, orden),
+            activo = COALESCE($8, activo),
+            padre_id = $9,
+            updated_at = NOW()
           WHERE id = $10
           RETURNING
             id,
@@ -374,7 +375,10 @@ export async function PATCH(
     );
 
     return NextResponse.json(
-      { error: "No se pudo actualizar el contenido." },
+      {
+        error:
+          "No se pudo actualizar el contenido.",
+      },
       { status: 500 },
     );
   }
@@ -399,7 +403,10 @@ export async function DELETE(
   const { id } = await context.params;
   const contenidoId = Number(id);
 
-  if (!Number.isInteger(contenidoId) || contenidoId < 1) {
+  if (
+    !Number.isInteger(contenidoId) ||
+    contenidoId < 1
+  ) {
     return NextResponse.json(
       { error: "ID inválido." },
       { status: 400 },
@@ -408,17 +415,16 @@ export async function DELETE(
 
   const database = await getDatabase();
 
-  const hijos = await database.query<
-    { id: number }[]
-  >(
-    `
-      SELECT id
-      FROM contenido_pagina
-      WHERE padre_id = $1
-      LIMIT 1
-    `,
-    [contenidoId],
-  );
+  const hijos =
+    await database.query<{ id: number }[]>(
+      `
+        SELECT id
+        FROM contenido_pagina
+        WHERE padre_id = $1
+        LIMIT 1
+      `,
+      [contenidoId],
+    );
 
   if (hijos.length > 0) {
     return NextResponse.json(

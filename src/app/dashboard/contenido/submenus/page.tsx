@@ -1,7 +1,5 @@
 import { redirect } from "next/navigation";
-import {
-  obtenerContenido,
-} from "@/lib/contenido";
+import { obtenerContenido } from "@/lib/contenido";
 import { obtenerSuperAdminDashboard } from "@/lib/dashboard";
 import ContenidoPanel from "@/app/dashboard/contenido/ContenidoPanel";
 
@@ -38,7 +36,13 @@ export default async function SubmenusDashboardPage() {
         <ContenidoPanel
           tipo="SUBMENU"
           contenidosIniciales={submenus}
-          padres={menus}
+          paginas={menus.map((menu) => ({
+            id: menu.id,
+            tipo: "MENU" as const,
+            titulo: menu.titulo,
+            slug: menu.slug,
+            padreTitulo: null,
+          }))}
         />
       </div>
     </section>

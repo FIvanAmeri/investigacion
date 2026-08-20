@@ -26,9 +26,7 @@ interface ContenidoCreado {
   padreId: number | null;
 }
 
-function esTipoContenido(
-  valor: unknown,
-): valor is ContenidoTipo {
+function esTipoContenido(valor: unknown): valor is ContenidoTipo {
   return (
     valor === "MENU" ||
     valor === "SUBMENU" ||
@@ -57,8 +55,7 @@ function normalizarSlug(valor: string): string {
 }
 
 export async function GET(request: NextRequest) {
-  const superAdmin =
-    await obtenerSuperAdminDashboard();
+  const superAdmin = await obtenerSuperAdminDashboard();
 
   if (!superAdmin) {
     return NextResponse.json(
@@ -105,11 +102,8 @@ export async function GET(request: NextRequest) {
   });
 }
 
-export async function POST(
-  request: NextRequest,
-) {
-  const superAdmin =
-    await obtenerSuperAdminDashboard();
+export async function POST(request: NextRequest) {
+  const superAdmin = await obtenerSuperAdminDashboard();
 
   if (!superAdmin) {
     return NextResponse.json(
@@ -121,8 +115,7 @@ export async function POST(
   let body: CrearContenidoBody;
 
   try {
-    body =
-      (await request.json()) as CrearContenidoBody;
+    body = (await request.json()) as CrearContenidoBody;
   } catch {
     return NextResponse.json(
       { error: "El cuerpo de la solicitud no es válido." },
@@ -142,7 +135,7 @@ export async function POST(
       ? body.titulo.trim()
       : "";
 
-  const slug =
+  let slug =
     typeof body.slug === "string"
       ? normalizarSlug(body.slug)
       : "";
@@ -159,11 +152,13 @@ export async function POST(
 
   if (
     body.orden !== undefined &&
-    (!Number.isInteger(body.orden) ||
-      body.orden < 1)
+    (!Number.isInteger(body.orden) || body.orden < 1)
   ) {
     return NextResponse.json(
-      { error: "El orden debe ser un entero mayor o igual a 1." },
+      {
+        error:
+          "El orden debe ser un entero mayor o igual a 1.",
+      },
       { status: 400 },
     );
   }
@@ -220,28 +215,59 @@ export async function POST(
 
   const database = await getDatabase();
 
-  const slugExistente =
-    await database.query<{ id: number }[]>(
-      `
-        SELECT id
-        FROM contenido_pagina
-        WHERE slug = $1
-        LIMIT 1
-      `,
-      [slug],
+  if (body.tipo === "SECCION") {
+    const slugsExistentes =
+      await database.query<{ slug: string }[]>(
+        `
+          SELECT slug
+          FROM contenido_pagina
+          WHERE slug = $1
+             OR slug LIKE $2
+          ORDER BY slug ASC
+        `,
+        [slug, `${slug}-contenido%`],
+      );
+
+    const usados = new Set(
+      slugsExistentes.map((item) => item.slug),
     );
 
-  if (slugExistente[0]) {
-    return NextResponse.json(
-      { error: "Ya existe un contenido con ese slug." },
-      { status: 409 },
-    );
+    if (usados.has(slug)) {
+      const slugContenido = `${slug}-contenido`;
+
+      if (!usados.has(slugContenido)) {
+        slug = slugContenido;
+      } else {
+        let numero = 2;
+
+        while (usados.has(`${slugContenido}-${numero}`)) {
+          numero += 1;
+        }
+
+        slug = `${slugContenido}-${numero}`;
+      }
+    }
+  } else {
+    const slugExistente =
+      await database.query<{ id: number }[]>(
+        `
+          SELECT id
+          FROM contenido_pagina
+          WHERE slug = $1
+          LIMIT 1
+        `,
+        [slug],
+      );
+
+    if (slugExistente[0]) {
+      return NextResponse.json(
+        { error: "Ya existe un contenido con ese slug." },
+        { status: 409 },
+      );
+    }
   }
 
-  if (
-    body.tipo !== "MENU" &&
-    body.padreId
-  ) {
+  if (body.tipo !== "MENU" && body.padreId) {
     const padre = await database.query<
       {
         id: number;
