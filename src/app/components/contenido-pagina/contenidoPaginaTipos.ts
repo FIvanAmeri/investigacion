@@ -3,7 +3,8 @@ export type ContenidoPaginaVista =
   | "INVESTIGADORES"
   | "TRATAMIENTOS"
   | "PATOLOGIAS"
-  | "RECURSOS";
+  | "RECURSOS"
+  | "GENERICO";
 
 export interface ImagenPublica {
   id: string;

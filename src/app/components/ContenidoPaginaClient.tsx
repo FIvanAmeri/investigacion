@@ -7,6 +7,7 @@ import {
 } from "react";
 
 import Cabecera from "./contenido-pagina/Cabecera";
+import ContenidoGenerico from "./contenido-pagina/ContenidoGenerico";
 import Equipo from "./contenido-pagina/Equipo";
 import Listado from "./contenido-pagina/Listado";
 import Recursos from "./contenido-pagina/Recursos";
@@ -31,10 +32,12 @@ export default function ContenidoPaginaClient({
   paginaSlug,
   vista,
 }: ContenidoPaginaClientProps) {
-  const [secciones, setSecciones] =
-    useState<SeccionPublica[]>(
-      [],
-    );
+  const [
+    secciones,
+    setSecciones,
+  ] = useState<SeccionPublica[]>(
+    [],
+  );
 
   const [cargando, setCargando] =
     useState(true);
@@ -111,12 +114,17 @@ export default function ContenidoPaginaClient({
       "INVESTIGADORES" &&
     !cabecera;
 
+  const vistaGenerica =
+    vista === "GENERICO";
+
   if (cargando) {
     return (
       <main className="min-h-[70vh] bg-white">
         <div className="mx-auto max-w-7xl px-6 py-24">
           <div className="h-4 w-24 animate-pulse bg-slate-100" />
+
           <div className="mt-4 h-10 w-80 animate-pulse bg-slate-100" />
+
           <div className="mt-6 h-20 max-w-2xl animate-pulse bg-slate-100" />
         </div>
       </main>
@@ -126,7 +134,8 @@ export default function ContenidoPaginaClient({
   if (
     error ||
     (!cabecera &&
-      !investigadoresSinCabecera)
+      !investigadoresSinCabecera &&
+      !vistaGenerica)
   ) {
     return (
       <main className="min-h-[70vh] bg-white">
@@ -154,10 +163,32 @@ export default function ContenidoPaginaClient({
     );
   }
 
+  if (vistaGenerica) {
+    return (
+      <>
+        {cabecera && (
+          <Cabecera
+            seccion={
+              cabecera
+            }
+          />
+        )}
+
+        <ContenidoGenerico
+          secciones={
+            items
+          }
+        />
+      </>
+    );
+  }
+
   if (investigadoresSinCabecera) {
     return (
       <Equipo
-        secciones={secciones}
+        secciones={
+          secciones
+        }
       />
     );
   }
@@ -166,28 +197,36 @@ export default function ContenidoPaginaClient({
     <>
       {cabecera && (
         <Cabecera
-          seccion={cabecera}
+          seccion={
+            cabecera
+          }
         />
       )}
 
       {vista ===
         "INSTITUCION" && (
         <TextoInstitucional
-          secciones={items}
+          secciones={
+            items
+          }
         />
       )}
 
       {vista ===
         "INVESTIGADORES" && (
         <Equipo
-          secciones={items}
+          secciones={
+            items
+          }
         />
       )}
 
       {vista ===
         "TRATAMIENTOS" && (
         <Listado
-          secciones={items}
+          secciones={
+            items
+          }
           tipo="TRATAMIENTO"
         />
       )}
@@ -195,7 +234,9 @@ export default function ContenidoPaginaClient({
       {vista ===
         "PATOLOGIAS" && (
         <Listado
-          secciones={items}
+          secciones={
+            items
+          }
           tipo="PATOLOGIA"
         />
       )}
@@ -203,7 +244,9 @@ export default function ContenidoPaginaClient({
       {vista ===
         "RECURSOS" && (
         <Recursos
-          secciones={items}
+          secciones={
+            items
+          }
         />
       )}
     </>
