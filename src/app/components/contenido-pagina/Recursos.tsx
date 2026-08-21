@@ -30,9 +30,8 @@ export default function Recursos({
     const valores = secciones
       .map(
         (seccion) =>
-          configuracion(
-            seccion,
-          ).categoria,
+          configuracion(seccion)
+            .categoria,
       )
       .filter(
         (
@@ -58,13 +57,10 @@ export default function Recursos({
     return secciones.filter(
       (seccion) => {
         const config =
-          configuracion(
-            seccion,
-          );
+          configuracion(seccion);
 
         const coincideCategoria =
-          categoria ===
-            "Todos" ||
+          categoria === "Todos" ||
           config.categoria ===
             categoria;
 
@@ -82,8 +78,7 @@ export default function Recursos({
           seccion.contenido,
           config.categoria,
           config.fuenteNombre,
-          ...(config.palabrasClave ??
-            []),
+          ...(config.palabrasClave ?? []),
         ]
           .filter(Boolean)
           .join(" ")
@@ -120,8 +115,8 @@ export default function Recursos({
   };
 
   return (
-    <section className="mx-auto max-w-7xl px-6 py-16 sm:py-20">
-      <div className="grid gap-5 md:grid-cols-[1fr_260px]">
+    <section className="mx-auto max-w-7xl px-6 py-10 sm:py-12">
+      <div className="grid gap-4 md:grid-cols-[1fr_240px]">
         <input
           type="search"
           value={busqueda}
@@ -156,21 +151,18 @@ export default function Recursos({
         </select>
       </div>
 
-      <p className="mt-3 text-xs text-slate-400">
+      <p className="mt-2 text-xs text-slate-400">
         {resultados.length}{" "}
-        {resultados.length ===
-        1
+        {resultados.length === 1
           ? "recurso encontrado"
           : "recursos encontrados"}
       </p>
 
-      <div className="mt-8 divide-y divide-slate-200 border-y border-slate-200">
+      <div className="mt-6 divide-y divide-slate-200 border-y border-slate-200">
         {resultados.map(
           (seccion) => {
             const config =
-              configuracion(
-                seccion,
-              );
+              configuracion(seccion);
 
             const abierto =
               abiertos.has(
@@ -180,26 +172,24 @@ export default function Recursos({
             return (
               <article
                 key={seccion.id}
-                className="py-10"
+                className="py-7"
               >
-                <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                   <div className="max-w-4xl">
                     {config.categoria && (
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-600">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-600">
                         {
                           config.categoria
                         }
                       </p>
                     )}
 
-                    <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
-                      {
-                        seccion.titulo
-                      }
+                    <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+                      {seccion.titulo}
                     </h2>
 
                     {config.descripcion && (
-                      <p className="mt-5 text-base leading-8 text-slate-600">
+                      <p className="mt-3 text-base leading-7 text-slate-600">
                         {
                           config.descripcion
                         }
@@ -226,9 +216,9 @@ export default function Recursos({
                 </div>
 
                 {abierto && (
-                  <div className="mt-8 max-w-4xl border-t border-slate-200 pt-8">
+                  <div className="mt-5 max-w-4xl border-t border-slate-200 pt-5">
                     {seccion.contenido && (
-                      <p className="whitespace-pre-line text-base leading-8 text-slate-700">
+                      <p className="whitespace-pre-line text-base leading-7 text-slate-700">
                         {
                           seccion.contenido
                         }

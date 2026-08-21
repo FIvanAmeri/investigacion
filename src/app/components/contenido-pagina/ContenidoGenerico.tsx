@@ -21,9 +21,7 @@ export default function ContenidoGenerico({
       {secciones.map(
         (seccion, index) => {
           const config =
-            configuracion(
-              seccion,
-            );
+            configuracion(seccion);
 
           const personas =
             Array.isArray(
@@ -33,8 +31,7 @@ export default function ContenidoGenerico({
               : [];
 
           const esPersona =
-            config.tipo ===
-              "PERSONA" ||
+            config.tipo === "PERSONA" ||
             personas.length > 0;
 
           if (
@@ -50,32 +47,26 @@ export default function ContenidoGenerico({
                     : "bg-slate-50"
                 }
               >
-                <div className="mx-auto max-w-7xl px-6 py-16 sm:py-20">
+                <div className="mx-auto max-w-7xl px-6 py-10 sm:py-12">
                   <div className="max-w-4xl">
                     {config.etiqueta && (
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-600">
-                        {
-                          config.etiqueta
-                        }
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-600">
+                        {config.etiqueta}
                       </p>
                     )}
 
-                    <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                      {
-                        seccion.titulo
-                      }
+                    <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+                      {seccion.titulo}
                     </h2>
 
                     {config.descripcion && (
-                      <p className="mt-5 text-lg leading-8 text-slate-600">
-                        {
-                          config.descripcion
-                        }
+                      <p className="mt-3 text-base leading-7 text-slate-600">
+                        {config.descripcion}
                       </p>
                     )}
                   </div>
 
-                  <div className="mt-12 grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="mt-8 grid gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
                     {personas.map(
                       (persona) => (
                         <article
@@ -100,8 +91,8 @@ export default function ContenidoGenerico({
                             </div>
                           )}
 
-                          <div className="pt-5">
-                            <div className="mb-3 h-px w-8 bg-cyan-500" />
+                          <div className="pt-3">
+                            <div className="mb-2 h-px w-8 bg-cyan-500" />
 
                             <h3 className="text-lg font-semibold text-slate-950">
                               {
@@ -110,7 +101,7 @@ export default function ContenidoGenerico({
                             </h3>
 
                             {persona.rol && (
-                              <p className="mt-2 text-sm text-slate-500">
+                              <p className="mt-1 text-sm text-slate-500">
                                 {
                                   persona.rol
                                 }
@@ -118,7 +109,7 @@ export default function ContenidoGenerico({
                             )}
 
                             {persona.contenido && (
-                              <p className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-600">
+                              <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600">
                                 {
                                   persona.contenido
                                 }
@@ -143,48 +134,36 @@ export default function ContenidoGenerico({
                   : "bg-slate-50"
               }
             >
-              <div className="mx-auto max-w-7xl px-6 py-16 sm:py-20">
+              <div className="mx-auto max-w-7xl px-6 py-10 sm:py-12">
                 <div className="max-w-4xl">
                   {config.etiqueta && (
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-600">
-                      {
-                        config.etiqueta
-                      }
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-600">
+                      {config.etiqueta}
                     </p>
                   )}
 
-                  <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                    {
-                      seccion.titulo
-                    }
+                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+                    {seccion.titulo}
                   </h2>
 
                   {config.descripcion && (
-                    <p className="mt-5 text-lg leading-8 text-slate-600">
-                      {
-                        config.descripcion
-                      }
+                    <p className="mt-3 text-base leading-7 text-slate-600">
+                      {config.descripcion}
                     </p>
                   )}
 
                   {seccion.contenido && (
-                    <div className="mt-7 whitespace-pre-line text-base leading-8 text-slate-700">
-                      {
-                        seccion.contenido
-                      }
+                    <div className="mt-4 whitespace-pre-line text-base leading-7 text-slate-700">
+                      {seccion.contenido}
                     </div>
                   )}
 
                   <ImagenesOpcionales
-                    seccion={
-                      seccion
-                    }
+                    seccion={seccion}
                   />
 
                   <Fuente
-                    seccion={
-                      seccion
-                    }
+                    seccion={seccion}
                   />
                 </div>
               </div>

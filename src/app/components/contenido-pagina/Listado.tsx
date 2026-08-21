@@ -40,9 +40,7 @@ export default function Listado({
     return secciones.filter(
       (seccion) => {
         const config =
-          configuracion(
-            seccion,
-          );
+          configuracion(seccion);
 
         if (
           config.tipo &&
@@ -59,8 +57,7 @@ export default function Listado({
           seccion.titulo,
           config.descripcion,
           seccion.contenido,
-          ...(config.palabrasClave ??
-            []),
+          ...(config.palabrasClave ?? []),
           config.fuenteNombre,
         ]
           .filter(Boolean)
@@ -103,9 +100,9 @@ export default function Listado({
       : "Patología";
 
   return (
-    <section className="mx-auto max-w-7xl px-6 py-16 sm:py-20">
+    <section className="mx-auto max-w-7xl px-6 py-10 sm:py-12">
       <div className="max-w-3xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
           Buscar contenido
         </p>
 
@@ -118,30 +115,26 @@ export default function Listado({
             )
           }
           placeholder={`Buscar ${
-            tipo ===
-            "TRATAMIENTO"
+            tipo === "TRATAMIENTO"
               ? "tratamiento"
               : "patología"
           }...`}
-          className="mt-4 h-11 w-full border border-slate-300 px-4 text-sm text-slate-900 outline-none focus:border-cyan-500"
+          className="mt-3 h-11 w-full border border-slate-300 px-4 text-sm text-slate-900 outline-none focus:border-cyan-500"
         />
 
-        <p className="mt-3 text-xs text-slate-400">
+        <p className="mt-2 text-xs text-slate-400">
           {resultados.length}{" "}
-          {resultados.length ===
-          1
+          {resultados.length === 1
             ? "resultado"
             : "resultados"}
         </p>
       </div>
 
-      <div className="mt-8">
+      <div className="mt-6">
         {resultados.map(
           (seccion, index) => {
             const config =
-              configuracion(
-                seccion,
-              );
+              configuracion(seccion);
 
             const abierto =
               abiertos.has(
@@ -156,22 +149,20 @@ export default function Listado({
                   <WaveDivider />
                 )}
 
-                <article className="py-12 first:pt-6">
-                  <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
+                <article className="py-8 first:pt-4">
+                  <div className="grid gap-6 lg:grid-cols-[1fr_240px]">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-600">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-600">
                         {config.etiqueta ||
                           etiqueta}
                       </p>
 
-                      <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
-                        {
-                          seccion.titulo
-                        }
+                      <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+                        {seccion.titulo}
                       </h2>
 
                       {config.descripcion && (
-                        <p className="mt-5 text-base leading-8 text-slate-600">
+                        <p className="mt-3 text-base leading-7 text-slate-600">
                           {
                             config.descripcion
                           }
@@ -180,8 +171,8 @@ export default function Listado({
 
                       {abierto &&
                         seccion.contenido && (
-                          <div className="mt-8 border-t border-slate-200 pt-8">
-                            <p className="whitespace-pre-line text-base leading-8 text-slate-700">
+                          <div className="mt-5 border-t border-slate-200 pt-5">
+                            <p className="whitespace-pre-line text-base leading-7 text-slate-700">
                               {
                                 seccion.contenido
                               }
@@ -225,26 +216,21 @@ export default function Listado({
                   {!abierto &&
                     palabrasClave(
                       seccion,
-                    ).length >
-                      0 && (
-                      <div className="mt-8 flex flex-wrap gap-2">
+                    ).length > 0 && (
+                      <div className="mt-5 flex flex-wrap gap-2">
                         {palabrasClave(
                           seccion,
                         )
                           .slice(0, 6)
                           .map(
-                            (
-                              palabra,
-                            ) => (
+                            (palabra) => (
                               <span
                                 key={
                                   palabra
                                 }
-                                className="border border-slate-200 px-3 py-1.5 text-[11px] uppercase tracking-wide text-slate-500"
+                                className="border border-slate-200 px-3 py-1 text-[11px] uppercase tracking-wide text-slate-500"
                               >
-                                {
-                                  palabra
-                                }
+                                {palabra}
                               </span>
                             ),
                           )}

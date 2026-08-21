@@ -1,31 +1,44 @@
 import Image from "next/image";
 
-import { imagenPrincipal } from "./contenidoPaginaHelpers";
+import { imagenesDeSeccion } from "./contenidoPaginaHelpers";
 import { SeccionPublica } from "./contenidoPaginaTipos";
 
-export default function ImagenOpcional({
+export default function ImagenesOpcionales({
   seccion,
 }: {
   seccion: SeccionPublica;
 }) {
-  const principal = imagenPrincipal(seccion);
+  const imagenes =
+    imagenesDeSeccion(seccion);
 
-  if (!principal) {
+  if (imagenes.length === 0) {
     return null;
   }
 
   return (
-    <div className="relative mt-8 overflow-hidden border border-slate-200 bg-slate-100">
-      <Image
-        src={principal.url}
-        alt={
-          principal.alt ||
-          seccion.titulo
-        }
-        width={1200}
-        height={700}
-        className="h-auto w-full object-cover"
-      />
+    <div className="mt-5 grid gap-4 sm:grid-cols-2">
+      {imagenes.map((imagen) => (
+        <figure
+          key={imagen.id}
+          className="overflow-hidden border border-slate-200 bg-slate-100"
+        >
+          <Image
+            src={imagen.url}
+            alt={
+              imagen.alt || seccion.titulo
+            }
+            width={1200}
+            height={700}
+            className="h-auto w-full object-cover"
+          />
+
+          {imagen.principal && (
+            <figcaption className="border-t border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-cyan-600">
+              Imagen principal
+            </figcaption>
+          )}
+        </figure>
+      ))}
     </div>
   );
 }
