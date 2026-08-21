@@ -1,6 +1,11 @@
 import { redirect } from "next/navigation";
+
 import { obtenerContenido } from "@/lib/contenido";
 import { obtenerSuperAdminDashboard } from "@/lib/dashboard";
+
+import ContenidoBuscador from "@/app/dashboard/contenido/ContenidoBuscador";
+import ContenidoNavegacion from "@/app/dashboard/contenido/ContenidoNavegacion";
+
 import SeccionesPanel from "./SeccionesPanel";
 
 export default async function SeccionesDashboardPage() {
@@ -11,12 +16,15 @@ export default async function SeccionesDashboardPage() {
     redirect("/dashboard");
   }
 
-  const [secciones, menus, submenus] =
-    await Promise.all([
-      obtenerContenido("SECCION"),
-      obtenerContenido("MENU"),
-      obtenerContenido("SUBMENU"),
-    ]);
+  const [
+    secciones,
+    menus,
+    submenus,
+  ] = await Promise.all([
+    obtenerContenido("SECCION"),
+    obtenerContenido("MENU"),
+    obtenerContenido("SUBMENU"),
+  ]);
 
   const paginas = [
     ...menus.map((menu) => ({
@@ -26,11 +34,14 @@ export default async function SeccionesDashboardPage() {
       slug: menu.slug,
       padreTitulo: null,
     })),
+
     ...submenus.map((submenu) => {
-      const menuPadre = menus.find(
-        (menu) =>
-          menu.id === submenu.padreId,
-      );
+      const menuPadre =
+        menus.find(
+          (menu) =>
+            menu.id ===
+            submenu.padreId,
+        );
 
       return {
         id: submenu.id,
@@ -38,7 +49,8 @@ export default async function SeccionesDashboardPage() {
         titulo: submenu.titulo,
         slug: submenu.slug,
         padreTitulo:
-          menuPadre?.titulo ?? null,
+          menuPadre?.titulo ??
+          null,
       };
     }),
   ];
@@ -58,12 +70,23 @@ export default async function SeccionesDashboardPage() {
         páginas públicas desde un único lugar.
       </p>
 
-      <div className="mt-8">
-        <SeccionesPanel
-          seccionesIniciales={secciones}
-          paginas={paginas}
-        />
-      </div>
+      <ContenidoNavegacion actual="secciones" />
+
+      <ContenidoBuscador
+        placeholder="Buscar sección por nombre, página o contenido..."
+        cantidad={secciones.length}
+        singular="sección"
+        plural="secciones"
+      >
+        <div className="mt-8">
+          <SeccionesPanel
+            seccionesIniciales={
+              secciones
+            }
+            paginas={paginas}
+          />
+        </div>
+      </ContenidoBuscador>
     </section>
   );
 }

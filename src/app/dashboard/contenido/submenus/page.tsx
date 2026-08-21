@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
+
 import { obtenerContenido } from "@/lib/contenido";
 import { obtenerSuperAdminDashboard } from "@/lib/dashboard";
+
+import ContenidoBuscador from "@/app/dashboard/contenido/ContenidoBuscador";
+import ContenidoNavegacion from "@/app/dashboard/contenido/ContenidoNavegacion";
 import ContenidoPanel from "@/app/dashboard/contenido/ContenidoPanel";
 
 export default async function SubmenusDashboardPage() {
@@ -32,19 +36,30 @@ export default async function SubmenusDashboardPage() {
         menú principal del navbar.
       </p>
 
-      <div className="mt-8">
-        <ContenidoPanel
-          tipo="SUBMENU"
-          contenidosIniciales={submenus}
-          paginas={menus.map((menu) => ({
-            id: menu.id,
-            tipo: "MENU" as const,
-            titulo: menu.titulo,
-            slug: menu.slug,
-            padreTitulo: null,
-          }))}
-        />
-      </div>
+      <ContenidoNavegacion actual="submenus" />
+
+      <ContenidoBuscador
+        placeholder="Buscar submenú por nombre..."
+        cantidad={submenus.length}
+        singular="submenú"
+        plural="submenús"
+      >
+        <div className="mt-8">
+          <ContenidoPanel
+            tipo="SUBMENU"
+            contenidosIniciales={submenus}
+            paginas={menus.map(
+              (menu) => ({
+                id: menu.id,
+                tipo: "MENU" as const,
+                titulo: menu.titulo,
+                slug: menu.slug,
+                padreTitulo: null,
+              }),
+            )}
+          />
+        </div>
+      </ContenidoBuscador>
     </section>
   );
 }

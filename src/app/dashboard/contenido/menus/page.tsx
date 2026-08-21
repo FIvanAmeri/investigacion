@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
+
 import { obtenerContenido } from "@/lib/contenido";
 import { obtenerSuperAdminDashboard } from "@/lib/dashboard";
+
+import ContenidoBuscador from "@/app/dashboard/contenido/ContenidoBuscador";
+import ContenidoNavegacion from "@/app/dashboard/contenido/ContenidoNavegacion";
 import ContenidoPanel from "@/app/dashboard/contenido/ContenidoPanel";
 
 export default async function MenusDashboardPage() {
@@ -29,13 +33,22 @@ export default async function MenusDashboardPage() {
         público.
       </p>
 
-      <div className="mt-8">
-        <ContenidoPanel
-          tipo="MENU"
-          contenidosIniciales={menus}
-          paginas={[]}
-        />
-      </div>
+      <ContenidoNavegacion actual="menus" />
+
+      <ContenidoBuscador
+        placeholder="Buscar menú por nombre..."
+        cantidad={menus.length}
+        singular="menú"
+        plural="menús"
+      >
+        <div className="mt-8">
+          <ContenidoPanel
+            tipo="MENU"
+            contenidosIniciales={menus}
+            paginas={[]}
+          />
+        </div>
+      </ContenidoBuscador>
     </section>
   );
 }
