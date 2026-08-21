@@ -13,7 +13,8 @@ export async function POST(
   request: Request,
 ) {
   try {
-    const body = await request.json();
+    const body =
+      await request.json();
 
     const nombre =
       typeof body.nombre === "string"
@@ -31,20 +32,20 @@ export async function POST(
         : "";
 
     const centroMedico =
-      typeof body.centroMedico ===
-      "string"
+      typeof body.centroMedico === "string"
         ? body.centroMedico.trim()
         : "";
 
     const especialidad =
-      typeof body.especialidad ===
-      "string"
+      typeof body.especialidad === "string"
         ? body.especialidad.trim()
         : "";
 
     const correo =
       typeof body.correo === "string"
-        ? body.correo.trim().toLowerCase()
+        ? body.correo
+            .trim()
+            .toLowerCase()
         : "";
 
     const password =
@@ -88,7 +89,9 @@ export async function POST(
 
     const usuarioExistente =
       await repository.findOne({
-        where: { correo },
+        where: {
+          correo,
+        },
       });
 
     if (usuarioExistente) {
@@ -102,10 +105,15 @@ export async function POST(
     }
 
     const passwordHash =
-      await bcrypt.hash(password, 12);
+      await bcrypt.hash(
+        password,
+        12,
+      );
 
     const tokenVerificacion =
-      crypto.randomBytes(32).toString("hex");
+      crypto
+        .randomBytes(32)
+        .toString("hex");
 
     const usuario =
       repository.create({
@@ -124,10 +132,13 @@ export async function POST(
         esSuperAdmin: false,
         tokenVerificacion,
         tokenRecuperacion: null,
-        tokenRecuperacionExpira: null,
+        tokenRecuperacionExpira:
+          null,
       });
 
-    await repository.save(usuario);
+    await repository.save(
+      usuario,
+    );
 
     try {
       await enviarCorreoVerificacion(
@@ -135,13 +146,20 @@ export async function POST(
         nombre,
         tokenVerificacion,
       );
-    } catch {
-      await repository.remove(usuario);
+    } catch (error) {
+      console.error(
+        "Error enviando correo de verificación:",
+        error,
+      );
+
+      await repository.remove(
+        usuario,
+      );
 
       return NextResponse.json(
         {
           error:
-            "No se pudo enviar el correo de verificación",
+            "No se pudo enviar el correo de registro",
         },
         { status: 500 },
       );
@@ -150,11 +168,16 @@ export async function POST(
     return NextResponse.json(
       {
         message:
-          "Registro realizado. Revisá tu correo electrónico para confirmar tu cuenta.",
+          "Registro realizado correctamente. Tu solicitud quedó pendiente de aprobación. Revisá tu correo electrónico para confirmar tu cuenta.",
       },
       { status: 201 },
     );
-  } catch {
+  } catch (error) {
+    console.error(
+      "Error en POST /api/auth/register:",
+      error,
+    );
+
     return NextResponse.json(
       {
         error:

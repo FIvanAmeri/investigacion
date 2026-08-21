@@ -34,19 +34,36 @@ const dataSourceOptions = {
 };
 
 export async function getDatabase(): Promise<DataSource> {
-  if (globalThis.appDataSource?.isInitialized) {
-    return globalThis.appDataSource;
-  }
+  const entidades = [
+    User,
+    Sistema,
+    UsuarioSistema,
+    ContenidoPagina,
+  ];
 
   const dataSource =
     globalThis.appDataSource ??
-    new DataSource(dataSourceOptions);
+    new DataSource({
+      ...dataSourceOptions,
+      entities: entidades,
+    });
 
-  if (!dataSource.isInitialized) {
-    await dataSource.initialize();
+  if (dataSource.isInitialized) {
+    if (dataSource.hasMetadata(User)) {
+      return dataSource;
+    }
+
+    await dataSource.destroy();
   }
 
-  globalThis.appDataSource = dataSource;
+  const nuevaDataSource = new DataSource({
+    ...dataSourceOptions,
+    entities: entidades,
+  });
 
-  return dataSource;
+  await nuevaDataSource.initialize();
+
+  globalThis.appDataSource = nuevaDataSource;
+
+  return nuevaDataSource;
 }

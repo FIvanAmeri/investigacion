@@ -5,6 +5,7 @@ import {
   EstadoUsuario,
   User,
 } from "@/entities/Usuario";
+import { enviarCorreoRechazo } from "@/lib/mail";
 
 interface RechazarBody {
   id?: number;
@@ -23,7 +24,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as RechazarBody;
+    const body =
+      (await request.json()) as RechazarBody;
 
     if (!body.id) {
       return NextResponse.json(
@@ -39,13 +41,14 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "No podés eliminar tu propia cuenta.",
+            "No podés rechazar tu propia cuenta.",
         },
         { status: 400 },
       );
     }
 
     const database = await getDatabase();
+
     const repositorio =
       database.getRepository(User);
 
@@ -68,13 +71,38 @@ export async function POST(request: Request) {
       );
     }
 
-    await repositorio.remove(investigador);
+    const correo =
+      investigador.correo;
+
+    const nombre =
+      investigador.nombre;
+
+    await repositorio.remove(
+      investigador,
+    );
+
+    try {
+      await enviarCorreoRechazo(
+        correo,
+        nombre,
+      );
+    } catch (caught) {
+      console.error(
+        "Error enviando correo de rechazo:",
+        caught,
+      );
+    }
 
     return NextResponse.json({
       mensaje:
-        "Investigador rechazado y eliminado correctamente.",
+        "Investigador rechazado correctamente.",
     });
-  } catch {
+  } catch (caught) {
+    console.error(
+      "Error rechazando investigador:",
+      caught,
+    );
+
     return NextResponse.json(
       {
         error:

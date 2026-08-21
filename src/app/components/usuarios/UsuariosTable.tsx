@@ -38,9 +38,7 @@ export default function UsuariosPanel({
   sistemas,
 }: UsuariosPanelProps) {
   const [usuarios, setUsuarios] =
-    useState<UsuarioDashboard[]>(
-      usuariosIniciales,
-    );
+    useState<UsuarioDashboard[]>(usuariosIniciales);
 
   const [estadoActivo, setEstadoActivo] =
     useState<string>("PENDIENTE");
@@ -48,48 +46,55 @@ export default function UsuariosPanel({
   const [procesando, setProcesando] =
     useState<number | null>(null);
 
-  const [error, setError] = useState<string | null>(
-    null,
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const usuariosFiltrados = useMemo(
+    () =>
+      usuarios.filter(
+        (usuario) =>
+          usuario.estado === estadoActivo,
+      ),
+    [usuarios, estadoActivo],
   );
 
-  const usuariosFiltrados = useMemo(() => {
-    return usuarios.filter(
-      (usuario) =>
-        usuario.estado === estadoActivo,
-    );
-  }, [usuarios, estadoActivo]);
-
-  async function actualizarUsuario(
+  async function aprobarUsuario(
     usuarioId: number,
-    accion: "aprobar" | "denegar",
-    rol?: string,
-    sistemasIds?: number[],
+    rol: string,
   ) {
     setProcesando(usuarioId);
     setError(null);
 
     try {
       const response = await fetch(
-        `/api/dashboard/usuarios/${usuarioId}`,
+        "/api/superadmin/aprobar",
         {
-          method: "PATCH",
+          method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
           body: JSON.stringify({
-            accion,
+            id: usuarioId,
             rol,
-            sistemasIds,
           }),
         },
       );
 
-      const data = await response.json();
+      const data =
+        (await response.json()) as {
+          error?: string;
+          usuario?: {
+            estado: string;
+            rol: string;
+            sistemasIds?: number[];
+          };
+        };
 
       if (!response.ok) {
         throw new Error(
           data.error ??
-            "No se pudo actualizar el usuario.",
+            "No se pudo aprobar el usuario.",
         );
       }
 
@@ -99,11 +104,122 @@ export default function UsuariosPanel({
             ? {
                 ...usuario,
                 estado:
-                  data.usuario.estado,
-                rol: data.usuario.rol,
+                  data.usuario?.estado ??
+                  "APROBADO",
+                rol:
+                  data.usuario?.rol ??
+                  rol,
                 sistemasIds:
-                  data.usuario.sistemasIds ??
-                  usuario.sistemasIds,
+                  data.usuario?.sistemasIds ??
+                  [],
+              }
+            : usuario,
+        ),
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Ocurrió un error inesperado.",
+      );
+    } finally {
+      setProcesando(null);
+    }
+  }
+
+  async function rechazarUsuario(
+    usuarioId: number,
+  ) {
+    setProcesando(usuarioId);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        "/api/superadmin/rechazar",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            id: usuarioId,
+          }),
+        },
+      );
+
+      const data =
+        (await response.json()) as {
+          error?: string;
+        };
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ??
+            "No se pudo rechazar el usuario.",
+        );
+      }
+
+      setUsuarios((actuales) =>
+        actuales.filter(
+          (usuario) =>
+            usuario.id !== usuarioId,
+        ),
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Ocurrió un error inesperado.",
+      );
+    } finally {
+      setProcesando(null);
+    }
+  }
+
+  async function actualizarSistemas(
+    usuarioId: number,
+    sistemasIds: number[],
+  ) {
+    setProcesando(usuarioId);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `/api/superadmin/usuarios/${usuarioId}/sistemas`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            sistemasIds,
+          }),
+        },
+      );
+
+      const data =
+        (await response.json()) as {
+          error?: string;
+          sistemasIds?: number[];
+        };
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ??
+            "No se pudieron actualizar los sistemas.",
+        );
+      }
+
+      setUsuarios((actuales) =>
+        actuales.map((usuario) =>
+          usuario.id === usuarioId
+            ? {
+                ...usuario,
+                sistemasIds:
+                  data.sistemasIds ??
+                  sistemasIds,
               }
             : usuario,
         ),
@@ -123,7 +239,8 @@ export default function UsuariosPanel({
     estado: string,
   ) =>
     usuarios.filter(
-      (usuario) => usuario.estado === estado,
+      (usuario) =>
+        usuario.estado === estado,
     ).length;
 
   return (
@@ -133,7 +250,9 @@ export default function UsuariosPanel({
           <button
             key={estado}
             type="button"
-            onClick={() => setEstadoActivo(estado)}
+            onClick={() =>
+              setEstadoActivo(estado)
+            }
             className={`border p-4 text-left transition ${
               estadoActivo === estado
                 ? "border-cyan-500 bg-cyan-50"
@@ -158,63 +277,52 @@ export default function UsuariosPanel({
       )}
 
       <div className="mt-6 overflow-hidden border border-slate-200 bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px]">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Usuario
-                </th>
+        <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
+          <div className="grid gap-4 md:grid-cols-[1.4fr_1.7fr_0.8fr]">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Usuario
+            </p>
 
-                <th className="px-5 py-4 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Información profesional
-                </th>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Información profesional
+            </p>
 
-                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Estado
-                </th>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Estado
+            </p>
+          </div>
+        </div>
 
-                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Rol
-                </th>
+        <div>
+          {usuariosFiltrados.map((usuario) => (
+            <UsuarioFila
+              key={usuario.id}
+              usuario={usuario}
+              roles={roles}
+              sistemas={sistemas}
+              procesando={
+                procesando === usuario.id
+              }
+              onAprobar={aprobarUsuario}
+              onRechazar={rechazarUsuario}
+              onActualizarSistemas={
+                actualizarSistemas
+              }
+            />
+          ))}
 
-                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Sistemas
-                </th>
+          {usuariosFiltrados.length === 0 && (
+            <div className="px-5 py-14 text-center">
+              <p className="text-sm font-medium text-slate-700">
+                No hay usuarios en este estado.
+              </p>
 
-                <th className="px-5 py-4 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {usuariosFiltrados.map((usuario) => (
-                <UsuarioFila
-                  key={usuario.id}
-                  usuario={usuario}
-                  roles={roles}
-                  sistemas={sistemas}
-                  procesando={
-                    procesando === usuario.id
-                  }
-                  onActualizar={actualizarUsuario}
-                />
-              ))}
-
-              {usuariosFiltrados.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-5 py-12 text-center text-sm text-slate-500"
-                  >
-                    No hay usuarios en este
-                    estado.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              <p className="mt-1 text-sm text-slate-400">
+                Los usuarios que correspondan
+                aparecerán aquí.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -226,11 +334,16 @@ interface UsuarioFilaProps {
   roles: string[];
   sistemas: SistemaDashboard[];
   procesando: boolean;
-  onActualizar: (
+  onAprobar: (
     usuarioId: number,
-    accion: "aprobar" | "denegar",
-    rol?: string,
-    sistemasIds?: number[],
+    rol: string,
+  ) => Promise<void>;
+  onRechazar: (
+    usuarioId: number,
+  ) => Promise<void>;
+  onActualizarSistemas: (
+    usuarioId: number,
+    sistemasIds: number[],
   ) => Promise<void>;
 }
 
@@ -239,246 +352,297 @@ function UsuarioFila({
   roles,
   sistemas,
   procesando,
-  onActualizar,
+  onAprobar,
+  onRechazar,
+  onActualizarSistemas,
 }: UsuarioFilaProps) {
   const [rolSeleccionado, setRolSeleccionado] =
     useState<string>(
-      usuario.rol === "INVESTIGADOR" ||
-        usuario.rol === "COLABORADOR"
-        ? usuario.rol
-        : roles[0] ?? "",
+      usuario.rol === "COLABORADOR"
+        ? "COLABORADOR"
+        : "INVESTIGADOR",
     );
 
-  const [sistemasSeleccionados, setSistemasSeleccionados] =
-    useState<number[]>(
-      usuario.sistemasIds,
-    );
+  const [
+    sistemasSeleccionados,
+    setSistemasSeleccionados,
+  ] = useState<number[]>(
+    usuario.sistemasIds,
+  );
 
-  const alternarSistema = (
+  const [
+    sistemasModificados,
+    setSistemasModificados,
+  ] = useState(false);
+
+  function alternarSistema(
     sistemaId: number,
-  ) => {
-    setSistemasSeleccionados((actuales) =>
-      actuales.includes(sistemaId)
-        ? actuales.filter(
-            (id) => id !== sistemaId,
-          )
-        : [...actuales, sistemaId],
+  ) {
+    setSistemasSeleccionados(
+      (actuales) =>
+        actuales.includes(sistemaId)
+          ? actuales.filter(
+              (id) => id !== sistemaId,
+            )
+          : [
+              ...actuales,
+              sistemaId,
+            ],
     );
-  };
+
+    setSistemasModificados(true);
+  }
 
   return (
-    <tr className="border-b border-slate-100 last:border-b-0">
-      <td className="px-5 py-5 align-middle">
-        <p className="font-semibold text-slate-950">
-          {usuario.nombre} {usuario.apellido}
-        </p>
+    <div className="border-b border-slate-200 last:border-b-0">
+      <div className="grid gap-6 px-5 py-6 md:grid-cols-[1.4fr_1.7fr_0.8fr]">
+        <div className="flex min-w-0 flex-col justify-center">
+          <p className="text-base font-semibold text-slate-950">
+            {usuario.nombre}{" "}
+            {usuario.apellido}
+          </p>
 
-        <p className="mt-1 text-sm text-slate-500">
-          {usuario.correo}
-        </p>
+          <p className="mt-1 break-all text-sm text-slate-500">
+            {usuario.correo}
+          </p>
 
-        {!usuario.correoVerificado && (
-          <span className="mt-2 inline-flex text-xs font-medium text-amber-600">
-            Correo sin verificar
+          <span
+            className={`mt-3 inline-flex w-fit text-xs font-medium ${
+              usuario.correoVerificado
+                ? "text-emerald-600"
+                : "text-amber-600"
+            }`}
+          >
+            {usuario.correoVerificado
+              ? "Correo verificado"
+              : "Correo sin verificar"}
           </span>
-        )}
-      </td>
-
-      <td className="px-5 py-5 align-middle">
-        <div className="mx-auto flex max-w-[360px] items-center justify-center">
-          <div className="flex w-full items-center justify-center">
-            <div className="flex flex-1 flex-col items-center justify-center px-4 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                Especialidad
-              </p>
-
-              <p className="mt-1 text-sm font-medium text-slate-700">
-                {usuario.especialidad}
-              </p>
-            </div>
-
-            <div className="flex flex-1 flex-col items-center justify-center border-l border-slate-100 px-4 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                Centro médico
-              </p>
-
-              <p className="mt-1 text-sm font-medium text-slate-700">
-                {usuario.centroMedico}
-              </p>
-            </div>
-
-            <div className="flex flex-1 flex-col items-center justify-center border-l border-slate-100 px-4 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                Localidad
-              </p>
-
-              <p className="mt-1 text-sm font-medium text-slate-700">
-                {usuario.localidad}
-              </p>
-            </div>
-          </div>
         </div>
-      </td>
 
-      <td className="px-5 py-5 align-middle">
-        <EstadoBadge estado={usuario.estado} />
-      </td>
+        <div className="grid min-w-0 grid-cols-1 border border-slate-100 sm:grid-cols-3">
+          <InfoProfesional
+            titulo="Especialidad"
+            valor={usuario.especialidad}
+          />
 
-      <td className="px-5 py-5 align-middle">
-        <span className="text-sm font-medium text-slate-700">
-          {usuario.esSuperAdmin
-            ? "SUPERADMIN"
-            : usuario.rol}
-        </span>
-      </td>
+          <InfoProfesional
+            titulo="Centro médico"
+            valor={usuario.centroMedico}
+          />
 
-      <td className="px-5 py-5 align-middle">
-        {usuario.sistemasIds.length > 0 ? (
-          <div className="flex max-w-[220px] flex-col gap-2">
-            {usuario.sistemasIds.map(
-              (sistemaId) => {
-                const sistema =
-                  sistemas.find(
-                    (item) =>
-                      item.id === sistemaId,
-                  );
+          <InfoProfesional
+            titulo="Localidad"
+            valor={usuario.localidad}
+          />
+        </div>
 
-                return sistema ? (
-                  <span
-                    key={sistema.id}
-                    className="border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700"
-                  >
-                    {sistema.nombre}
-                  </span>
-                ) : null;
-              },
-            )}
-          </div>
-        ) : (
-          <span className="text-sm text-slate-400">
-            Sin sistemas asignados
-          </span>
-        )}
-      </td>
+        <div className="flex items-center md:justify-start">
+          <EstadoBadge
+            estado={usuario.estado}
+          />
+        </div>
+      </div>
 
-      <td className="px-5 py-5 align-middle text-center">
-        {usuario.estado === "PENDIENTE" &&
-          !usuario.esSuperAdmin && (
-            <div className="mx-auto flex min-w-[250px] flex-col gap-3 text-left">
-              <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Rol
-                </label>
+      <div className="mx-5 border-t border-slate-100" />
 
-                <select
-                  value={rolSeleccionado}
-                  onChange={(event) =>
-                    setRolSeleccionado(
-                      event.target.value,
-                    )
-                  }
-                  disabled={procesando}
-                  className="w-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-cyan-500"
+      <div className="grid gap-6 bg-slate-50/60 px-5 py-5 lg:grid-cols-[0.8fr_1.8fr_0.9fr]">
+        <div>
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            Rol
+          </p>
+
+          {usuario.estado ===
+            "PENDIENTE" &&
+          !usuario.esSuperAdmin ? (
+            <select
+              value={rolSeleccionado}
+              onChange={(event) =>
+                setRolSeleccionado(
+                  event.target.value,
+                )
+              }
+              disabled={procesando}
+              className="h-10 w-full border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-cyan-500"
+            >
+              {roles.map((rol) => (
+                <option
+                  key={rol}
+                  value={rol}
                 >
-                  {roles.map((rol) => (
-                    <option
-                      key={rol}
-                      value={rol}
-                    >
-                      {rol}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Sistemas asignados
-                </p>
-
-                <div className="max-h-40 space-y-2 overflow-y-auto border border-slate-200 p-3">
-                  {sistemas.length === 0 ? (
-                    <p className="text-xs text-slate-400">
-                      No hay sistemas disponibles.
-                    </p>
-                  ) : (
-                    sistemas.map((sistema) => (
-                      <label
-                        key={sistema.id}
-                        className="flex cursor-pointer items-center gap-2 text-sm text-slate-700"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={sistemasSeleccionados.includes(
-                            sistema.id,
-                          )}
-                          onChange={() =>
-                            alternarSistema(
-                              sistema.id,
-                            )
-                          }
-                          disabled={procesando}
-                          className="h-4 w-4"
-                        />
-
-                        <span>
-                          {sistema.nombre}
-                        </span>
-                      </label>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={
-                    procesando ||
-                    sistemasSeleccionados.length ===
-                      0
-                  }
-                  onClick={() =>
-                    onActualizar(
-                      usuario.id,
-                      "aprobar",
-                      rolSeleccionado,
-                      sistemasSeleccionados,
-                    )
-                  }
-                  className="flex-1 bg-slate-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {procesando
-                    ? "Procesando..."
-                    : "Aprobar"}
-                </button>
-
-                <button
-                  type="button"
-                  disabled={procesando}
-                  onClick={() =>
-                    onActualizar(
-                      usuario.id,
-                      "denegar",
-                    )
-                  }
-                  className="flex-1 border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Rechazar
-                </button>
-              </div>
+                  {rol}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="flex h-10 items-center border border-slate-200 bg-white px-3">
+              <span className="text-sm font-medium text-slate-700">
+                {usuario.esSuperAdmin
+                  ? "SUPERADMIN"
+                  : usuario.rol}
+              </span>
             </div>
           )}
+        </div>
 
-        {usuario.estado !== "PENDIENTE" && (
-          <div className="flex w-full items-center justify-center text-center">
-            <span className="text-sm text-slate-400">
-              Sin acciones pendientes
-            </span>
+        <div>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              Sistemas asignados
+            </p>
+
+            {usuario.estado !==
+              "PENDIENTE" &&
+              !usuario.esSuperAdmin && (
+                <span className="text-xs text-slate-400">
+                  {sistemasSeleccionados.length}{" "}
+                  asignado
+                  {sistemasSeleccionados.length ===
+                  1
+                    ? ""
+                    : "s"}
+                </span>
+              )}
           </div>
-        )}
-      </td>
-    </tr>
+
+          {usuario.estado ===
+          "PENDIENTE" ? (
+            <div className="flex min-h-10 items-center border border-slate-200 bg-white px-3">
+              <p className="text-sm text-slate-400">
+                Se pueden asignar después de
+                aprobar.
+              </p>
+            </div>
+          ) : usuario.esSuperAdmin ? (
+            <div className="flex min-h-10 items-center border border-slate-200 bg-white px-3">
+              <p className="text-sm text-slate-400">
+                Todos los sistemas disponibles.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="grid gap-2 border border-slate-200 bg-white p-3 sm:grid-cols-2">
+                {sistemas.length === 0 ? (
+                  <p className="text-xs text-slate-400 sm:col-span-2">
+                    No hay sistemas disponibles.
+                  </p>
+                ) : (
+                  sistemas.map((sistema) => (
+                    <label
+                      key={sistema.id}
+                      className="flex min-w-0 cursor-pointer items-center gap-2 border border-transparent px-2 py-2 text-sm text-slate-700 transition hover:border-slate-200 hover:bg-slate-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={sistemasSeleccionados.includes(
+                          sistema.id,
+                        )}
+                        onChange={() =>
+                          alternarSistema(
+                            sistema.id,
+                          )
+                        }
+                        disabled={procesando}
+                        className="h-4 w-4 shrink-0 accent-cyan-500"
+                      />
+
+                      <span className="min-w-0 truncate">
+                        {sistema.nombre}
+                      </span>
+                    </label>
+                  ))
+                )}
+              </div>
+
+              <button
+                type="button"
+                disabled={
+                  procesando ||
+                  !sistemasModificados
+                }
+                onClick={() =>
+                  onActualizarSistemas(
+                    usuario.id,
+                    sistemasSeleccionados,
+                  ).then(() =>
+                    setSistemasModificados(
+                      false,
+                    ),
+                  )
+                }
+                className="h-10 border border-cyan-600 px-4 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Guardar sistemas
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            Acciones
+          </p>
+
+          {usuario.estado ===
+            "PENDIENTE" &&
+          !usuario.esSuperAdmin ? (
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+              <button
+                type="button"
+                disabled={procesando}
+                onClick={() =>
+                  onAprobar(
+                    usuario.id,
+                    rolSeleccionado,
+                  )
+                }
+                className="h-10 w-full bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {procesando
+                  ? "Procesando..."
+                  : "Aprobar"}
+              </button>
+
+              <button
+                type="button"
+                disabled={procesando}
+                onClick={() =>
+                  onRechazar(usuario.id)
+                }
+                className="h-10 w-full border border-red-200 bg-white px-4 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Rechazar
+              </button>
+            </div>
+          ) : (
+            <div className="flex h-10 items-center">
+              <span className="text-sm text-slate-400">
+                Sin acciones
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoProfesional({
+  titulo,
+  valor,
+}: {
+  titulo: string;
+  valor: string;
+}) {
+  return (
+    <div className="min-w-0 border-b border-slate-100 px-4 py-3 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+        {titulo}
+      </p>
+
+      <p className="mt-1 break-words text-sm font-medium text-slate-700">
+        {valor}
+      </p>
+    </div>
   );
 }
 

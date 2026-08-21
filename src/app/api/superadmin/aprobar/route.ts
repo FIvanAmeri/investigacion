@@ -3,11 +3,14 @@ import { getSession } from "@/lib/auth";
 import { getDatabase } from "@/lib/db";
 import {
   EstadoUsuario,
+  RolUsuario,
   User,
 } from "@/entities/Usuario";
+import { enviarCorreoAprobacion } from "@/lib/mail";
 
 interface AprobarBody {
   id?: number;
+  rol?: RolUsuario;
 }
 
 export async function POST(request: Request) {
@@ -23,7 +26,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as AprobarBody;
+    const body =
+      (await request.json()) as AprobarBody;
 
     if (!body.id) {
       return NextResponse.json(
@@ -35,7 +39,13 @@ export async function POST(request: Request) {
       );
     }
 
+    const rol =
+      body.rol === RolUsuario.COLABORADOR
+        ? RolUsuario.COLABORADOR
+        : RolUsuario.INVESTIGADOR;
+
     const database = await getDatabase();
+
     const repositorio =
       database.getRepository(User);
 
@@ -50,13 +60,16 @@ export async function POST(request: Request) {
     if (!investigador) {
       return NextResponse.json(
         {
-          error: "Investigador no encontrado.",
+          error:
+            "Investigador no encontrado.",
         },
         { status: 404 },
       );
     }
 
-    if (!investigador.correoVerificado) {
+    if (
+      !investigador.correoVerificado
+    ) {
       return NextResponse.json(
         {
           error:
@@ -82,13 +95,42 @@ export async function POST(request: Request) {
     investigador.estado =
       EstadoUsuario.APROBADO;
 
-    await repositorio.save(investigador);
+    investigador.rol = rol;
+
+    investigador.esSuperAdmin = false;
+
+    await repositorio.save(
+      investigador,
+    );
+
+    try {
+      await enviarCorreoAprobacion(
+        investigador.correo,
+        investigador.nombre,
+      );
+    } catch (caught) {
+      console.error(
+        "Error enviando correo de aprobación:",
+        caught,
+      );
+    }
 
     return NextResponse.json({
       mensaje:
         "Investigador aprobado correctamente.",
+      usuario: {
+        id: investigador.id,
+        estado: investigador.estado,
+        rol: investigador.rol,
+        sistemasIds: [],
+      },
     });
-  } catch {
+  } catch (caught) {
+    console.error(
+      "Error aprobando investigador:",
+      caught,
+    );
+
     return NextResponse.json(
       {
         error:

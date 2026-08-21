@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
+
 type Vista = "login" | "registro" | "recuperar";
 
 interface LoginResponse {
@@ -11,28 +12,48 @@ interface LoginResponse {
   error?: string;
 }
 
+interface RegistroResponse {
+  message?: string;
+  error?: string;
+}
+
 export default function ZonaInvestigadoresForm() {
   const router = useRouter();
 
-  const [vista, setVista] = useState<Vista>("login");
+  const [vista, setVista] =
+    useState<Vista>("login");
 
-  const [correo, setCorreo] = useState("");
-  const [contrasena, setContrasena] = useState("");
-
-  const [nombre, setNombre] = useState("");
-  const [apellido, setApellido] = useState("");
-  const [localidad, setLocalidad] = useState("");
-  const [centroMedico, setCentroMedico] = useState("");
-  const [especialidad, setEspecialidad] = useState("");
-
-  const [correoRecuperacion, setCorreoRecuperacion] =
+  const [correo, setCorreo] =
+    useState("");
+  const [contrasena, setContrasena] =
     useState("");
 
-  const [mensaje, setMensaje] = useState("");
-  const [error, setError] = useState("");
-  const [cargando, setCargando] = useState(false);
+  const [nombre, setNombre] =
+    useState("");
+  const [apellido, setApellido] =
+    useState("");
+  const [localidad, setLocalidad] =
+    useState("");
+  const [centroMedico, setCentroMedico] =
+    useState("");
+  const [especialidad, setEspecialidad] =
+    useState("");
 
-  const cambiarVista = (nuevaVista: Vista) => {
+  const [
+    correoRecuperacion,
+    setCorreoRecuperacion,
+  ] = useState("");
+
+  const [mensaje, setMensaje] =
+    useState("");
+  const [error, setError] =
+    useState("");
+  const [cargando, setCargando] =
+    useState(false);
+
+  const cambiarVista = (
+    nuevaVista: Vista,
+  ) => {
     setVista(nuevaVista);
     setMensaje("");
     setError("");
@@ -53,7 +74,8 @@ export default function ZonaInvestigadoresForm() {
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
           credentials: "include",
           body: JSON.stringify({
@@ -69,15 +91,15 @@ export default function ZonaInvestigadoresForm() {
       if (!response.ok) {
         setError(
           data.error ??
-            "No se pudo iniciar sesión.",
+          "No se pudo iniciar sesión.",
         );
         return;
       }
 
       setMensaje(
         data.mensaje ??
-          data.message ??
-          "Logueado exitosamente.",
+        data.message ??
+        "Logueado exitosamente.",
       );
 
       router.push("/dashboard");
@@ -91,6 +113,74 @@ export default function ZonaInvestigadoresForm() {
     }
   };
 
+
+  const registrarUsuario = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
+    setMensaje("");
+    setError("");
+    setCargando(true);
+
+    try {
+      const response = await fetch(
+        "/api/auth/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            nombre,
+            apellido,
+            localidad,
+            centroMedico,
+            especialidad,
+            correo,
+            password: contrasena,
+          }),
+        },
+      );
+
+      const data =
+        (await response.json()) as RegistroResponse;
+
+      if (!response.ok) {
+        setError(
+          data.error ??
+          "No se pudo crear la cuenta.",
+        );
+        return;
+      }
+
+      setMensaje(
+        data.message ??
+        "Cuenta creada correctamente. Revisá tu correo electrónico: tu solicitud quedó pendiente de aprobación.",
+      );
+
+      setNombre("");
+      setApellido("");
+      setLocalidad("");
+      setCentroMedico("");
+      setEspecialidad("");
+      setCorreo("");
+      setContrasena("");
+
+      window.setTimeout(() => {
+        router.push("/");
+      }, 3000);
+    } catch {
+      setError(
+        "No se pudo conectar con el servidor.",
+      );
+    } finally {
+      setCargando(false);
+    }
+  };
+
+
   return (
     <main className="min-h-[calc(100vh-68px)] bg-slate-50">
       <section className="mx-auto flex min-h-[calc(100vh-68px)] max-w-7xl items-center justify-center px-6 py-16">
@@ -101,9 +191,12 @@ export default function ZonaInvestigadoresForm() {
             </p>
 
             <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-              {vista === "login" && "Ingresar"}
+              {vista === "login" &&
+                "Ingresar"}
+
               {vista === "registro" &&
                 "Crear cuenta"}
+
               {vista === "recuperar" &&
                 "Recuperar contraseña"}
             </h1>
@@ -214,7 +307,9 @@ export default function ZonaInvestigadoresForm() {
                   <button
                     type="button"
                     onClick={() =>
-                      cambiarVista("registro")
+                      cambiarVista(
+                        "registro",
+                      )
                     }
                     className="text-sm font-semibold text-cyan-600 transition-colors hover:text-cyan-700"
                   >
@@ -226,9 +321,7 @@ export default function ZonaInvestigadoresForm() {
 
             {vista === "registro" && (
               <form
-                onSubmit={(event) =>
-                  event.preventDefault()
-                }
+                onSubmit={registrarUsuario}
                 className="space-y-5"
               >
                 <div className="grid gap-5 sm:grid-cols-2">
@@ -251,6 +344,7 @@ export default function ZonaInvestigadoresForm() {
                       }
                       placeholder="Nombre"
                       autoComplete="given-name"
+                      required
                       className="h-12 w-full border border-slate-300 bg-white px-4 text-sm text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-cyan-500"
                     />
                   </div>
@@ -274,6 +368,7 @@ export default function ZonaInvestigadoresForm() {
                       }
                       placeholder="Apellido"
                       autoComplete="family-name"
+                      required
                       className="h-12 w-full border border-slate-300 bg-white px-4 text-sm text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-cyan-500"
                     />
                   </div>
@@ -298,6 +393,7 @@ export default function ZonaInvestigadoresForm() {
                     }
                     placeholder="Localidad"
                     autoComplete="address-level2"
+                    required
                     className="h-12 w-full border border-slate-300 bg-white px-4 text-sm text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-cyan-500"
                   />
                 </div>
@@ -320,6 +416,7 @@ export default function ZonaInvestigadoresForm() {
                       )
                     }
                     placeholder="Centro médico"
+                    required
                     className="h-12 w-full border border-slate-300 bg-white px-4 text-sm text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-cyan-500"
                   />
                 </div>
@@ -342,6 +439,7 @@ export default function ZonaInvestigadoresForm() {
                       )
                     }
                     placeholder="Especialidad"
+                    required
                     className="h-12 w-full border border-slate-300 bg-white px-4 text-sm text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-cyan-500"
                   />
                 </div>
@@ -365,15 +463,61 @@ export default function ZonaInvestigadoresForm() {
                     }
                     placeholder="tu@correo.com"
                     autoComplete="email"
+                    required
                     className="h-12 w-full border border-slate-300 bg-white px-4 text-sm text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-cyan-500"
                   />
                 </div>
 
+                <div>
+                  <label
+                    htmlFor="registro-contrasena"
+                    className="mb-2 block text-xs font-semibold uppercase tracking-[0.15em] text-slate-500"
+                  >
+                    Contraseña
+                  </label>
+
+                  <input
+                    id="registro-contrasena"
+                    type="password"
+                    value={contrasena}
+                    onChange={(event) =>
+                      setContrasena(
+                        event.target.value,
+                      )
+                    }
+                    placeholder="Mínimo 8 caracteres"
+                    autoComplete="new-password"
+                    minLength={8}
+                    required
+                    className="h-12 w-full border border-slate-300 bg-white px-4 text-sm text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-cyan-500"
+                  />
+
+                  <p className="mt-2 text-xs text-slate-500">
+                    La contraseña debe tener al
+                    menos 8 caracteres.
+                  </p>
+                </div>
+
+                {error && (
+                  <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {error}
+                  </div>
+                )}
+
+                {mensaje && (
+                  <div className="border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    {mensaje}
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  className="flex h-12 w-full items-center justify-center bg-cyan-500 px-5 text-xs font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-cyan-600"
+                  disabled={cargando}
+                  className="flex h-12 w-full items-center justify-center bg-cyan-500 px-5 text-xs font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Crear cuenta
+                  {cargando
+                    ? "Creando cuenta..."
+                    : "Crear cuenta"}
                 </button>
 
                 <div className="border-t border-slate-200 pt-5 text-center">
