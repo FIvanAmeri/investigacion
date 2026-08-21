@@ -115,21 +115,9 @@ const TIPOS: Array<{
   },
 ];
 
-function esSeccionTipo(
-  valor: unknown,
-): valor is SeccionTipo {
-  return (
-    valor === "CABECERA" ||
-    valor === "TEXTO" ||
-    valor === "TRATAMIENTO" ||
-    valor === "PATOLOGIA" ||
-    valor === "RECURSO" ||
-    valor === "PERSONA"
-  );
-}
-
 function nuevoId(): string {
-  return typeof crypto !== "undefined" &&
+  return typeof crypto !==
+    "undefined" &&
     "randomUUID" in crypto
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random()
@@ -176,7 +164,10 @@ function normalizarImagenes(
       }
 
       const objeto =
-        item as Record<string, unknown>;
+        item as Record<
+          string,
+          unknown
+        >;
 
       const url =
         typeof objeto.url === "string"
@@ -190,13 +181,15 @@ function normalizarImagenes(
       return [
         {
           id:
-            typeof objeto.id === "string" &&
+            typeof objeto.id ===
+              "string" &&
             objeto.id
               ? objeto.id
               : nuevoId(),
           url,
           alt:
-            typeof objeto.alt === "string"
+            typeof objeto.alt ===
+            "string"
               ? objeto.alt
               : "",
           principal:
@@ -224,23 +217,27 @@ function normalizarPersonas(
       }
 
       const objeto =
-        item as Record<string, unknown>;
-
-      const nombre =
-        typeof objeto.nombre === "string"
-          ? objeto.nombre
-          : "";
+        item as Record<
+          string,
+          unknown
+        >;
 
       return [
         {
           id:
-            typeof objeto.id === "string" &&
+            typeof objeto.id ===
+              "string" &&
             objeto.id
               ? objeto.id
               : nuevoId(),
-          nombre,
+          nombre:
+            typeof objeto.nombre ===
+            "string"
+              ? objeto.nombre
+              : "",
           rol:
-            typeof objeto.rol === "string"
+            typeof objeto.rol ===
+            "string"
               ? objeto.rol
               : "",
           contenido:
@@ -282,7 +279,8 @@ function leerConfiguracion(
       ? [
           {
             id: nuevoId(),
-            url: configuracion.imagenUrl,
+            url:
+              configuracion.imagenUrl,
             alt:
               typeof configuracion.imagenAlt ===
               "string"
@@ -301,7 +299,8 @@ function leerConfiguracion(
   if (
     imagenes.length > 0 &&
     !imagenes.some(
-      (imagen) => imagen.principal,
+      (imagen) =>
+        imagen.principal,
     )
   ) {
     imagenes[0] = {
@@ -311,11 +310,21 @@ function leerConfiguracion(
   }
 
   return {
-    tipo: esSeccionTipo(
-      configuracion.tipo,
-    )
-      ? configuracion.tipo
-      : undefined,
+    tipo:
+      configuracion.tipo ===
+        "CABECERA" ||
+      configuracion.tipo ===
+        "TEXTO" ||
+      configuracion.tipo ===
+        "TRATAMIENTO" ||
+      configuracion.tipo ===
+        "PATOLOGIA" ||
+      configuracion.tipo ===
+        "RECURSO" ||
+      configuracion.tipo ===
+        "PERSONA"
+        ? configuracion.tipo
+        : undefined,
     etiqueta:
       typeof configuracion.etiqueta ===
       "string"
@@ -327,7 +336,8 @@ function leerConfiguracion(
         ? configuracion.descripcion
         : "",
     rol:
-      typeof configuracion.rol === "string"
+      typeof configuracion.rol ===
+      "string"
         ? configuracion.rol
         : "",
     categoria:
@@ -348,7 +358,8 @@ function leerConfiguracion(
         ? configuracion.imagenAlt
         : ""),
     mostrarImagen:
-      configuracion.mostrarImagen === true ||
+      configuracion.mostrarImagen ===
+        true ||
       imagenes.length > 0,
     imagenes,
     fuenteNombre:
@@ -362,7 +373,8 @@ function leerConfiguracion(
         ? configuracion.fuenteUrl
         : "",
     mostrarFuente:
-      configuracion.mostrarFuente === true,
+      configuracion.mostrarFuente ===
+      true,
     palabrasClave:
       Array.isArray(
         configuracion.palabrasClave,
@@ -371,14 +383,17 @@ function leerConfiguracion(
             (
               valor,
             ): valor is string =>
-              typeof valor === "string",
+              typeof valor ===
+              "string",
           )
         : [],
     destacado:
-      configuracion.destacado === true,
-    personas: normalizarPersonas(
-      configuracion.personas,
-    ),
+      configuracion.destacado ===
+      true,
+    personas:
+      normalizarPersonas(
+        configuracion.personas,
+      ),
   };
 }
 
@@ -389,28 +404,37 @@ function crearFormulario(
     leerConfiguracion(seccion);
 
   return {
-    titulo: seccion?.titulo ?? "",
-    slug: seccion?.slug ?? "",
-    contenido: seccion?.contenido ?? "",
+    titulo:
+      seccion?.titulo ?? "",
+    slug:
+      seccion?.slug ?? "",
+    contenido:
+      seccion?.contenido ?? "",
     orden: String(
       seccion?.orden ?? 1,
     ),
-    activo: seccion?.activo ?? true,
+    activo:
+      seccion?.activo ?? true,
     paginaId:
       seccion?.padreId !== null &&
       seccion?.padreId !== undefined
         ? String(seccion.padreId)
         : "",
-    tipo: config.tipo ?? "TEXTO",
-    etiqueta: config.etiqueta ?? "",
+    tipo:
+      config.tipo ?? "TEXTO",
+    etiqueta:
+      config.etiqueta ?? "",
     descripcion:
       config.descripcion ?? "",
-    rol: config.rol ?? "",
+    rol:
+      config.rol ?? "",
     categoria:
       config.categoria ?? "",
     imagenesActivas:
-      (config.imagenes ?? []).length > 0,
-    imagenes: config.imagenes ?? [],
+      (config.imagenes ?? [])
+        .length > 0,
+    imagenes:
+      config.imagenes ?? [],
     fuenteActiva:
       config.mostrarFuente === true,
     fuenteNombre:
@@ -493,11 +517,15 @@ function leerRespuesta(
   }
 
   const objeto =
-    data as Record<string, unknown>;
+    data as Record<
+      string,
+      unknown
+    >;
 
   return {
     error:
-      typeof objeto.error === "string"
+      typeof objeto.error ===
+      "string"
         ? objeto.error
         : undefined,
     contenido:
@@ -515,16 +543,26 @@ export default function SeccionesPanel({
 }: SeccionesPanelProps) {
   const router = useRouter();
 
-  const [secciones, setSecciones] =
-    useState(seccionesIniciales);
+  const [
+    secciones,
+    setSecciones,
+  ] = useState(
+    seccionesIniciales,
+  );
 
-  const [formulario, setFormulario] =
-    useState<Formulario>(
-      crearFormulario(),
-    );
+  const [
+    formulario,
+    setFormulario,
+  ] = useState<Formulario>(
+    crearFormulario(),
+  );
 
-  const [editandoId, setEditandoId] =
-    useState<number | null>(null);
+  const [
+    editandoId,
+    setEditandoId,
+  ] = useState<number | null>(
+    null,
+  );
 
   const [
     mostrarFormulario,
@@ -537,7 +575,9 @@ export default function SeccionesPanel({
   const [
     accionandoId,
     setAccionandoId,
-  ] = useState<number | null>(null);
+  ] = useState<number | null>(
+    null,
+  );
 
   const [mensaje, setMensaje] =
     useState<string | null>(null);
@@ -552,35 +592,46 @@ export default function SeccionesPanel({
 
   const paginasOrdenadas = useMemo(
     () =>
-      [...paginas].sort((a, b) =>
-        paginaLabel(a).localeCompare(
-          paginaLabel(b),
-          "es",
-        ),
+      [...paginas].sort(
+        (a, b) =>
+          paginaLabel(a).localeCompare(
+            paginaLabel(b),
+            "es",
+          ),
       ),
     [paginas],
   );
 
-  const seccionesOrdenadas = useMemo(
-    () =>
-      [...secciones].sort((a, b) => {
-        if (
-          a.padreId !== b.padreId
-        ) {
-          return (
-            (a.padreId ?? 0) -
-            (b.padreId ?? 0)
-          );
-        }
+  const seccionesOrdenadas =
+    useMemo(
+      () =>
+        [...secciones].sort(
+          (a, b) => {
+            if (
+              a.padreId !==
+              b.padreId
+            ) {
+              return (
+                (a.padreId ?? 0) -
+                (b.padreId ?? 0)
+              );
+            }
 
-        if (a.orden !== b.orden) {
-          return a.orden - b.orden;
-        }
+            if (
+              a.orden !==
+              b.orden
+            ) {
+              return (
+                a.orden -
+                b.orden
+              );
+            }
 
-        return a.id - b.id;
-      }),
-    [secciones],
-  );
+            return a.id - b.id;
+          },
+        ),
+      [secciones],
+    );
 
   const abrirNuevo = () => {
     setEditandoId(null);
@@ -595,7 +646,9 @@ export default function SeccionesPanel({
   const abrirEditar = (
     seccion: ContenidoPagina,
   ) => {
-    setEditandoId(seccion.id);
+    setEditandoId(
+      seccion.id,
+    );
     setFormulario(
       crearFormulario(seccion),
     );
@@ -643,7 +696,9 @@ export default function SeccionesPanel({
 
   const cargarImagen = async (
     archivo: File,
-    aplicar: (url: string) => void,
+    aplicar: (
+      url: string,
+    ) => void,
   ) => {
     if (
       !archivo.type.startsWith(
@@ -656,7 +711,10 @@ export default function SeccionesPanel({
       return;
     }
 
-    if (archivo.size > 5 * 1024 * 1024) {
+    if (
+      archivo.size >
+      5 * 1024 * 1024
+    ) {
       setError(
         "La imagen no puede superar los 5 MB.",
       );
@@ -676,13 +734,14 @@ export default function SeccionesPanel({
         archivo,
       );
 
-      const response = await fetch(
-        "/api/dashboard/contenido/imagen",
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
+      const response =
+        await fetch(
+          "/api/dashboard/contenido/imagen",
+          {
+            method: "POST",
+            body: formData,
+          },
+        );
 
       const data =
         (await response.json()) as {
@@ -717,19 +776,17 @@ export default function SeccionesPanel({
   };
 
   const agregarImagen = () => {
-    setFormulario((actual) => {
-      const principal =
-        actual.imagenes.length === 0;
-
-      return {
-        ...actual,
-        imagenesActivas: true,
-        imagenes: [
-          ...actual.imagenes,
-          imagenVacia(principal),
-        ],
-      };
-    });
+    setFormulario((actual) => ({
+      ...actual,
+      imagenesActivas: true,
+      imagenes: [
+        ...actual.imagenes,
+        imagenVacia(
+          actual.imagenes
+            .length === 0,
+        ),
+      ],
+    }));
   };
 
   const actualizarImagen = (
@@ -744,18 +801,15 @@ export default function SeccionesPanel({
       ...actual,
       imagenes:
         actual.imagenes
-          .map((imagen) => {
-            if (
-              imagen.id !== id
-            ) {
-              return imagen;
-            }
-
-            return {
-              ...imagen,
-              [campo]: valor,
-            } as ImagenContenido;
-          })
+          .map((imagen) =>
+            imagen.id === id
+              ? {
+                  ...imagen,
+                  [campo]:
+                    valor,
+                }
+              : imagen,
+          )
           .map((imagen) =>
             campo ===
               "principal" &&
@@ -763,7 +817,8 @@ export default function SeccionesPanel({
             imagen.id !== id
               ? {
                   ...imagen,
-                  principal: false,
+                  principal:
+                    false,
                 }
               : imagen,
           ),
@@ -828,7 +883,8 @@ export default function SeccionesPanel({
             persona.id === id
               ? {
                   ...persona,
-                  [campo]: valor,
+                  [campo]:
+                    valor,
                 }
               : persona,
         ),
@@ -865,10 +921,14 @@ export default function SeccionesPanel({
         formulario.slug.trim();
 
       const paginaId =
-        Number(formulario.paginaId);
+        Number(
+          formulario.paginaId,
+        );
 
       const orden =
-        Number(formulario.orden);
+        Number(
+          formulario.orden,
+        );
 
       if (!titulo) {
         throw new Error(
@@ -894,7 +954,9 @@ export default function SeccionesPanel({
       }
 
       if (
-        !Number.isInteger(orden) ||
+        !Number.isInteger(
+          orden,
+        ) ||
         orden < 1
       ) {
         throw new Error(
@@ -910,7 +972,8 @@ export default function SeccionesPanel({
           )
           .map((imagen) => ({
             ...imagen,
-            url: imagen.url.trim(),
+            url:
+              imagen.url.trim(),
             alt:
               imagen.alt.trim() ||
               titulo,
@@ -947,9 +1010,76 @@ export default function SeccionesPanel({
         };
       }
 
+      const personas =
+        formulario.personas.map(
+          (persona) => ({
+            ...persona,
+            nombre:
+              persona.nombre.trim(),
+            rol:
+              persona.rol.trim(),
+            contenido:
+              persona.contenido.trim(),
+            imagenUrl:
+              persona.imagenUrl.trim(),
+            imagenAlt:
+              persona.imagenAlt.trim(),
+          }),
+        );
+
+      const personasVacias =
+        personas.filter(
+          (persona) =>
+            !persona.nombre &&
+            !persona.rol &&
+            !persona.contenido &&
+            !persona.imagenUrl &&
+            !persona.imagenAlt,
+        );
+
+      if (
+        personasVacias.length !==
+        personas.length
+      ) {
+        const personaSinNombre =
+          personas.find(
+            (persona) =>
+              !persona.nombre,
+          );
+
+        if (
+          personaSinNombre
+        ) {
+          throw new Error(
+            "Cada integrante debe tener un nombre.",
+          );
+        }
+      }
+
+      const seccionActual =
+        editandoId !== null
+          ? secciones.find(
+              (seccion) =>
+                seccion.id ===
+                editandoId,
+            )
+          : undefined;
+
+      const configuracionActual =
+        seccionActual
+          ?.configuracion &&
+        typeof seccionActual.configuracion ===
+          "object"
+          ? {
+              ...seccionActual.configuracion,
+            }
+          : {};
+
       const configuracion: ConfiguracionSeccion =
         {
-          tipo: formulario.tipo,
+          ...configuracionActual,
+          tipo:
+            formulario.tipo,
         };
 
       if (
@@ -957,6 +1087,8 @@ export default function SeccionesPanel({
       ) {
         configuracion.etiqueta =
           formulario.etiqueta.trim();
+      } else {
+        delete configuracion.etiqueta;
       }
 
       if (
@@ -964,33 +1096,31 @@ export default function SeccionesPanel({
       ) {
         configuracion.descripcion =
           formulario.descripcion.trim();
+      } else {
+        delete configuracion.descripcion;
       }
 
       if (
-        formulario.tipo ===
-          "PERSONA" &&
         formulario.rol.trim()
       ) {
         configuracion.rol =
           formulario.rol.trim();
+      } else {
+        delete configuracion.rol;
       }
 
       if (
-        (
-          formulario.tipo ===
-            "RECURSO" ||
-          formulario.tipo ===
-            "TRATAMIENTO" ||
-          formulario.tipo ===
-            "PATOLOGIA"
-        ) &&
         formulario.categoria.trim()
       ) {
         configuracion.categoria =
           formulario.categoria.trim();
+      } else {
+        delete configuracion.categoria;
       }
 
-      if (imagenes.length > 0) {
+      if (
+        imagenes.length > 0
+      ) {
         configuracion.mostrarImagen =
           true;
 
@@ -1001,13 +1131,20 @@ export default function SeccionesPanel({
           imagenes.find(
             (imagen) =>
               imagen.principal,
-          ) ?? imagenes[0];
+          ) ??
+          imagenes[0];
 
         configuracion.imagenUrl =
           principal.url;
 
         configuracion.imagenAlt =
           principal.alt;
+      } else {
+        delete configuracion.imagenes;
+        delete configuracion.imagenUrl;
+        delete configuracion.imagenAlt;
+        configuracion.mostrarImagen =
+          false;
       }
 
       if (
@@ -1024,85 +1161,89 @@ export default function SeccionesPanel({
         ) {
           configuracion.fuenteUrl =
             formulario.fuenteUrl.trim();
+        } else {
+          delete configuracion.fuenteUrl;
         }
+      } else {
+        delete configuracion.fuenteNombre;
+        delete configuracion.fuenteUrl;
+        configuracion.mostrarFuente =
+          false;
       }
 
+      const palabrasClave =
+        formulario.palabrasClave
+          .split(",")
+          .map((item) =>
+            item.trim(),
+          )
+          .filter(Boolean);
+
       if (
-        formulario.palabrasClave.trim()
+        palabrasClave.length > 0
       ) {
         configuracion.palabrasClave =
-          formulario.palabrasClave
-            .split(",")
-            .map((item) =>
-              item.trim(),
-            )
-            .filter(Boolean);
+          palabrasClave;
+      } else {
+        delete configuracion.palabrasClave;
       }
+
+      configuracion.destacado =
+        formulario.destacado;
 
       if (
         formulario.tipo ===
         "PERSONA"
       ) {
-        configuracion.destacado =
-          formulario.destacado;
-
-        const personas =
-          formulario.personas
-            .map((persona) => ({
-              ...persona,
-              nombre:
-                persona.nombre.trim(),
-              rol:
-                persona.rol.trim(),
-              contenido:
-                persona.contenido.trim(),
-              imagenUrl:
-                persona.imagenUrl.trim(),
-              imagenAlt:
-                persona.imagenAlt.trim(),
-            }))
-            .filter(
-              (persona) =>
-                persona.nombre,
-            );
+        const personasValidas =
+          personas.filter(
+            (persona) =>
+              persona.nombre,
+          );
 
         if (
-          personas.length > 0
+          personasValidas.length >
+          0
         ) {
           configuracion.personas =
-            personas;
+            personasValidas;
+        } else {
+          delete configuracion.personas;
         }
+      } else {
+        delete configuracion.personas;
       }
 
       const esNueva =
         editandoId === null;
 
-      const response = await fetch(
-        esNueva
-          ? "/api/dashboard/contenido"
-          : `/api/dashboard/contenido/${editandoId}`,
-        {
-          method: esNueva
-            ? "POST"
-            : "PATCH",
-          headers: {
-            "Content-Type":
-              "application/json",
+      const response =
+        await fetch(
+          esNueva
+            ? "/api/dashboard/contenido"
+            : `/api/dashboard/contenido/${editandoId}`,
+          {
+            method: esNueva
+              ? "POST"
+              : "PATCH",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              tipo: "SECCION",
+              titulo,
+              slug,
+              contenido:
+                formulario.contenido,
+              configuracion,
+              orden,
+              activo:
+                formulario.activo,
+              padreId: paginaId,
+            }),
           },
-          body: JSON.stringify({
-            tipo: "SECCION",
-            titulo,
-            slug,
-            contenido:
-              formulario.contenido,
-            configuracion,
-            orden,
-            activo:
-              formulario.activo,
-            padreId: paginaId,
-          }),
-        },
-      );
+        );
 
       const data =
         leerRespuesta(
@@ -1167,25 +1308,28 @@ export default function SeccionesPanel({
   const cambiarActivo = async (
     seccion: ContenidoPagina,
   ) => {
-    setAccionandoId(seccion.id);
+    setAccionandoId(
+      seccion.id,
+    );
     setMensaje(null);
     setError(null);
 
     try {
-      const response = await fetch(
-        `/api/dashboard/contenido/${seccion.id}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type":
-              "application/json",
+      const response =
+        await fetch(
+          `/api/dashboard/contenido/${seccion.id}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              activo:
+                !seccion.activo,
+            }),
           },
-          body: JSON.stringify({
-            activo:
-              !seccion.activo,
-          }),
-        },
-      );
+        );
 
       const data =
         leerRespuesta(
@@ -1203,7 +1347,8 @@ export default function SeccionesPanel({
         (actuales) =>
           actuales.map(
             (item) =>
-              item.id === seccion.id
+              item.id ===
+              seccion.id
                 ? {
                     ...item,
                     ...(data.contenido ??
@@ -1247,17 +1392,20 @@ export default function SeccionesPanel({
       return;
     }
 
-    setAccionandoId(seccion.id);
+    setAccionandoId(
+      seccion.id,
+    );
     setMensaje(null);
     setError(null);
 
     try {
-      const response = await fetch(
-        `/api/dashboard/contenido/${seccion.id}`,
-        {
-          method: "DELETE",
-        },
-      );
+      const response =
+        await fetch(
+          `/api/dashboard/contenido/${seccion.id}`,
+          {
+            method: "DELETE",
+          },
+        );
 
       const data =
         leerRespuesta(
@@ -1275,7 +1423,8 @@ export default function SeccionesPanel({
         (actuales) =>
           actuales.filter(
             (item) =>
-              item.id !== seccion.id,
+              item.id !==
+              seccion.id,
           ),
       );
 
@@ -1304,7 +1453,8 @@ export default function SeccionesPanel({
       "RECURSO";
 
   const esPersona =
-    formulario.tipo === "PERSONA";
+    formulario.tipo ===
+    "PERSONA";
 
   const formularioEditor =
     mostrarFormulario ? (
@@ -1319,13 +1469,14 @@ export default function SeccionesPanel({
             </p>
 
             <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-              {editandoId === null
+              {editandoId ===
+              null
                 ? "Crear sección"
                 : "Editar sección"}
             </h2>
 
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Los campos repetibles se guardan dentro de la configuración JSON de la sección.
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+              Todos los campos guardados de la sección se pueden editar desde este formulario.
             </p>
           </div>
 
@@ -1369,8 +1520,12 @@ export default function SeccionesPanel({
               {paginasOrdenadas.map(
                 (pagina) => (
                   <option
-                    key={pagina.id}
-                    value={pagina.id}
+                    key={
+                      pagina.id
+                    }
+                    value={
+                      pagina.id
+                    }
                   >
                     {paginaLabel(
                       pagina,
@@ -1401,14 +1556,22 @@ export default function SeccionesPanel({
                 "h-11",
               )}
             >
-              {TIPOS.map((tipo) => (
-                <option
-                  key={tipo.value}
-                  value={tipo.value}
-                >
-                  {tipo.label}
-                </option>
-              ))}
+              {TIPOS.map(
+                (tipo) => (
+                  <option
+                    key={
+                      tipo.value
+                    }
+                    value={
+                      tipo.value
+                    }
+                  >
+                    {
+                      tipo.label
+                    }
+                  </option>
+                ),
+              )}
             </select>
           </label>
 
@@ -1523,7 +1686,7 @@ export default function SeccionesPanel({
           </label>
 
           {esPersona && (
-            <label className="block">
+            <label className="block lg:col-span-2">
               <span className="text-sm font-semibold text-slate-800">
                 Rol principal
               </span>
@@ -1546,7 +1709,7 @@ export default function SeccionesPanel({
           )}
 
           {necesitaCategoria && (
-            <label className="block">
+            <label className="block lg:col-span-2">
               <span className="text-sm font-semibold text-slate-800">
                 Categoría
               </span>
@@ -1568,7 +1731,654 @@ export default function SeccionesPanel({
             </label>
           )}
 
-          <label className="flex items-center gap-3 lg:col-span-2">
+          <div className="border-t border-slate-200 pt-6 lg:col-span-2">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-slate-950">
+                  Imágenes
+                </h3>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Podés agregar, editar,
+                  reemplazar y eliminar
+                  imágenes de esta sección.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <label className="inline-flex h-10 cursor-pointer items-center gap-2 border border-slate-300 px-4 text-xs font-semibold text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={
+                      formulario.imagenesActivas
+                    }
+                    onChange={(event) => {
+                      actualizar(
+                        "imagenesActivas",
+                        event.target.checked,
+                      );
+
+                      if (
+                        event.target
+                          .checked &&
+                        formulario.imagenes
+                          .length === 0
+                      ) {
+                        agregarImagen();
+                      }
+                    }}
+                    className="h-4 w-4"
+                  />
+                  Usar imágenes
+                </label>
+
+                <button
+                  type="button"
+                  onClick={
+                    agregarImagen
+                  }
+                  className="h-10 bg-slate-950 px-4 text-xs font-semibold text-white hover:bg-cyan-600"
+                >
+                  Agregar imagen
+                </button>
+              </div>
+            </div>
+
+            {formulario.imagenesActivas &&
+              formulario.imagenes
+                .length ===
+                0 && (
+                <div className="mt-4 border border-dashed border-slate-300 px-5 py-8 text-center text-sm text-slate-500">
+                  Todavía no hay
+                  imágenes. Agregá
+                  una para comenzar.
+                </div>
+              )}
+
+            {formulario.imagenesActivas &&
+              formulario.imagenes
+                .length >
+                0 && (
+                <div className="mt-5 space-y-5">
+                  {formulario.imagenes.map(
+                    (
+                      imagen,
+                      index,
+                    ) => (
+                      <article
+                        key={
+                          imagen.id
+                        }
+                        className="border border-slate-200 bg-slate-50 p-5"
+                      >
+                        <div className="flex flex-col gap-5 lg:flex-row">
+                          <div className="w-full shrink-0 lg:w-52">
+                            {imagen.url ? (
+                              <img
+                                src={
+                                  imagen.url
+                                }
+                                alt={
+                                  imagen.alt ||
+                                  formulario.titulo
+                                }
+                                className="h-52 w-full object-cover border border-slate-200 bg-white"
+                              />
+                            ) : (
+                              <div className="flex h-52 items-center justify-center border border-dashed border-slate-300 bg-white text-center text-xs text-slate-400">
+                                Sin imagen
+                              </div>
+                            )}
+
+                            <label className="mt-3 flex h-10 cursor-pointer items-center justify-center border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:border-cyan-500 hover:text-cyan-600">
+                              {subiendoImagen
+                                ? "Subiendo..."
+                                : "Subir imagen"}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                disabled={
+                                  subiendoImagen
+                                }
+                                onChange={(
+                                  event,
+                                ) => {
+                                  const archivo =
+                                    event
+                                      .target
+                                      .files?.[0];
+
+                                  if (
+                                    !archivo
+                                  ) {
+                                    return;
+                                  }
+
+                                  void cargarImagen(
+                                    archivo,
+                                    (
+                                      url,
+                                    ) =>
+                                      actualizarImagen(
+                                        imagen.id,
+                                        "url",
+                                        url,
+                                      ),
+                                  );
+
+                                  event.currentTarget.value =
+                                    "";
+                                }}
+                              />
+                            </label>
+                          </div>
+
+                          <div className="min-w-0 flex-1 space-y-4">
+                            <div className="flex items-center justify-between gap-3">
+                              <h4 className="font-semibold text-slate-950">
+                                Imagen{" "}
+                                {index +
+                                  1}
+                              </h4>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  eliminarImagen(
+                                    imagen.id,
+                                  )
+                                }
+                                className="text-xs font-semibold text-red-600 hover:text-red-700"
+                              >
+                                Eliminar
+                              </button>
+                            </div>
+
+                            <label className="block">
+                              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                URL / ruta
+                              </span>
+
+                              <input
+                                value={
+                                  imagen.url
+                                }
+                                onChange={(
+                                  event,
+                                ) =>
+                                  actualizarImagen(
+                                    imagen.id,
+                                    "url",
+                                    event
+                                      .target
+                                      .value,
+                                  )
+                                }
+                                className={campoBase(
+                                  "h-11",
+                                )}
+                              />
+                            </label>
+
+                            <label className="block">
+                              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Texto alternativo
+                              </span>
+
+                              <input
+                                value={
+                                  imagen.alt
+                                }
+                                onChange={(
+                                  event,
+                                ) =>
+                                  actualizarImagen(
+                                    imagen.id,
+                                    "alt",
+                                    event
+                                      .target
+                                      .value,
+                                  )
+                                }
+                                className={campoBase(
+                                  "h-11",
+                                )}
+                              />
+                            </label>
+
+                            <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+                              <input
+                                type="checkbox"
+                                checked={
+                                  imagen.principal
+                                }
+                                onChange={(
+                                  event,
+                                ) =>
+                                  actualizarImagen(
+                                    imagen.id,
+                                    "principal",
+                                    event
+                                      .target
+                                      .checked,
+                                  )
+                                }
+                                className="h-4 w-4"
+                              />
+                              Imagen principal
+                            </label>
+                          </div>
+                        </div>
+                      </article>
+                    ),
+                  )}
+                </div>
+              )}
+          </div>
+
+          {esPersona && (
+            <div className="border-t border-slate-200 pt-6 lg:col-span-2">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-base font-semibold text-slate-950">
+                    Integrantes
+                  </h3>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Administrá todas las
+                    personas que aparecen
+                    en la sección Nuestro
+                    equipo.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={
+                    agregarPersona
+                  }
+                  className="h-10 bg-slate-950 px-4 text-xs font-semibold text-white hover:bg-cyan-600"
+                >
+                  Agregar integrante
+                </button>
+              </div>
+
+              {formulario.personas
+                .length ===
+                0 && (
+                <div className="mt-4 border border-dashed border-slate-300 px-5 py-8 text-center text-sm text-slate-500">
+                  Todavía no hay
+                  integrantes cargados.
+                </div>
+              )}
+
+              {formulario.personas
+                .length >
+                0 && (
+                <div className="mt-5 space-y-5">
+                  {formulario.personas.map(
+                    (
+                      persona,
+                      index,
+                    ) => (
+                      <article
+                        key={
+                          persona.id
+                        }
+                        className="border border-slate-200 bg-slate-50 p-5"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-cyan-600">
+                              Integrante{" "}
+                              {index +
+                                1}
+                            </p>
+
+                            <h4 className="mt-1 text-lg font-semibold text-slate-950">
+                              {persona.nombre ||
+                                "Nuevo integrante"}
+                            </h4>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              eliminarPersona(
+                                persona.id,
+                              )
+                            }
+                            className="text-xs font-semibold text-red-600 hover:text-red-700"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+
+                        <div className="mt-5 grid gap-5 lg:grid-cols-[220px_1fr]">
+                          <div>
+                            {persona.imagenUrl ? (
+                              <img
+                                src={
+                                  persona.imagenUrl
+                                }
+                                alt={
+                                  persona.imagenAlt ||
+                                  persona.nombre ||
+                                  "Integrante"
+                                }
+                                className="h-64 w-full object-cover border border-slate-200 bg-white"
+                              />
+                            ) : (
+                              <div className="flex h-64 items-center justify-center border border-dashed border-slate-300 bg-white text-center text-xs text-slate-400">
+                                Este integrante
+                                no tiene
+                                imagen
+                              </div>
+                            )}
+
+                            <label className="mt-3 flex h-10 cursor-pointer items-center justify-center border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:border-cyan-500 hover:text-cyan-600">
+                              {subiendoImagen
+                                ? "Subiendo..."
+                                : "Subir imagen"}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                disabled={
+                                  subiendoImagen
+                                }
+                                onChange={(
+                                  event,
+                                ) => {
+                                  const archivo =
+                                    event
+                                      .target
+                                      .files?.[0];
+
+                                  if (
+                                    !archivo
+                                  ) {
+                                    return;
+                                  }
+
+                                  void cargarImagen(
+                                    archivo,
+                                    (
+                                      url,
+                                    ) =>
+                                      actualizarPersona(
+                                        persona.id,
+                                        "imagenUrl",
+                                        url,
+                                      ),
+                                  );
+
+                                  event.currentTarget.value =
+                                    "";
+                                }}
+                              />
+                            </label>
+                          </div>
+
+                          <div className="space-y-4">
+                            <label className="block">
+                              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Nombre
+                              </span>
+
+                              <input
+                                value={
+                                  persona.nombre
+                                }
+                                onChange={(
+                                  event,
+                                ) =>
+                                  actualizarPersona(
+                                    persona.id,
+                                    "nombre",
+                                    event
+                                      .target
+                                      .value,
+                                  )
+                                }
+                                className={campoBase(
+                                  "h-11",
+                                )}
+                                required
+                              />
+                            </label>
+
+                            <label className="block">
+                              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Rol
+                              </span>
+
+                              <input
+                                value={
+                                  persona.rol
+                                }
+                                onChange={(
+                                  event,
+                                ) =>
+                                  actualizarPersona(
+                                    persona.id,
+                                    "rol",
+                                    event
+                                      .target
+                                      .value,
+                                  )
+                                }
+                                className={campoBase(
+                                  "h-11",
+                                )}
+                              />
+                            </label>
+
+                            <label className="block">
+                              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Descripción
+                              </span>
+
+                              <textarea
+                                value={
+                                  persona.contenido
+                                }
+                                onChange={(
+                                  event,
+                                ) =>
+                                  actualizarPersona(
+                                    persona.id,
+                                    "contenido",
+                                    event
+                                      .target
+                                      .value,
+                                  )
+                                }
+                                rows={6}
+                                className={campoBase(
+                                  "py-3",
+                                )}
+                              />
+                            </label>
+
+                            <label className="block">
+                              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                URL / ruta de imagen
+                              </span>
+
+                              <input
+                                value={
+                                  persona.imagenUrl
+                                }
+                                onChange={(
+                                  event,
+                                ) =>
+                                  actualizarPersona(
+                                    persona.id,
+                                    "imagenUrl",
+                                    event
+                                      .target
+                                      .value,
+                                  )
+                                }
+                                className={campoBase(
+                                  "h-11",
+                                )}
+                              />
+                            </label>
+
+                            <label className="block">
+                              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Texto alternativo de imagen
+                              </span>
+
+                              <input
+                                value={
+                                  persona.imagenAlt
+                                }
+                                onChange={(
+                                  event,
+                                ) =>
+                                  actualizarPersona(
+                                    persona.id,
+                                    "imagenAlt",
+                                    event
+                                      .target
+                                      .value,
+                                  )
+                                }
+                                className={campoBase(
+                                  "h-11",
+                                )}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      </article>
+                    ),
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="border-t border-slate-200 pt-6 lg:col-span-2">
+            <h3 className="text-base font-semibold text-slate-950">
+              Fuente y metadatos
+            </h3>
+
+            <div className="mt-5 space-y-5">
+              <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={
+                    formulario.fuenteActiva
+                  }
+                  onChange={(event) =>
+                    actualizar(
+                      "fuenteActiva",
+                      event.target.checked,
+                    )
+                  }
+                  className="h-4 w-4"
+                />
+                Mostrar fuente
+              </label>
+
+              {formulario.fuenteActiva && (
+                <div className="grid gap-5 lg:grid-cols-2">
+                  <label className="block">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Nombre de la fuente
+                    </span>
+
+                    <input
+                      value={
+                        formulario.fuenteNombre
+                      }
+                      onChange={(
+                        event,
+                      ) =>
+                        actualizar(
+                          "fuenteNombre",
+                          event.target.value,
+                        )
+                      }
+                      className={campoBase(
+                        "h-11",
+                      )}
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      URL de la fuente
+                    </span>
+
+                    <input
+                      type="url"
+                      value={
+                        formulario.fuenteUrl
+                      }
+                      onChange={(
+                        event,
+                      ) =>
+                        actualizar(
+                          "fuenteUrl",
+                          event.target.value,
+                        )
+                      }
+                      className={campoBase(
+                        "h-11",
+                      )}
+                    />
+                  </label>
+                </div>
+              )}
+
+              <label className="block">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Palabras clave
+                </span>
+
+                <input
+                  value={
+                    formulario.palabrasClave
+                  }
+                  onChange={(event) =>
+                    actualizar(
+                      "palabrasClave",
+                      event.target.value,
+                    )
+                  }
+                  placeholder="Separadas por comas"
+                  className={campoBase(
+                    "h-11",
+                  )}
+                />
+              </label>
+
+              <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={
+                    formulario.destacado
+                  }
+                  onChange={(event) =>
+                    actualizar(
+                      "destacado",
+                      event.target.checked,
+                    )
+                  }
+                  className="h-4 w-4"
+                />
+                Marcar como destacado
+              </label>
+            </div>
+          </div>
+
+          <label className="flex items-center gap-3 border-t border-slate-200 pt-6 text-sm font-semibold text-slate-800 lg:col-span-2">
             <input
               type="checkbox"
               checked={
@@ -1582,10 +2392,7 @@ export default function SeccionesPanel({
               }
               className="h-4 w-4"
             />
-
-            <span className="text-sm font-semibold text-slate-800">
-              Publicar esta sección
-            </span>
+            Publicar esta sección
           </label>
         </div>
 
@@ -1668,7 +2475,9 @@ export default function SeccionesPanel({
 
             return (
               <div
-                key={seccion.id}
+                key={
+                  seccion.id
+                }
               >
                 <article className="border border-slate-200 bg-white p-5 sm:p-6">
                   <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -1695,7 +2504,9 @@ export default function SeccionesPanel({
                       </div>
 
                       <h3 className="mt-3 text-xl font-semibold text-slate-950">
-                        {seccion.titulo}
+                        {
+                          seccion.titulo
+                        }
                       </h3>
 
                       <p className="mt-1 text-sm text-slate-500">
@@ -1717,7 +2528,9 @@ export default function SeccionesPanel({
 
                       {seccion.contenido && (
                         <p className="mt-3 max-w-3xl whitespace-pre-line text-sm leading-6 text-slate-500">
-                          {seccion.contenido.length >
+                          {seccion
+                            .contenido
+                            .length >
                           280
                             ? `${seccion.contenido.slice(
                                 0,
@@ -1751,6 +2564,25 @@ export default function SeccionesPanel({
                               1
                                 ? "integrante"
                                 : "integrantes"}
+                            </span>
+                          )}
+
+                        {config.imagenes &&
+                          config.imagenes
+                            .length >
+                            0 && (
+                            <span>
+                              {
+                                config
+                                  .imagenes
+                                  .length
+                              }{" "}
+                              {config
+                                .imagenes
+                                .length ===
+                              1
+                                ? "imagen"
+                                : "imágenes"}
                             </span>
                           )}
                       </div>
@@ -1815,17 +2647,19 @@ export default function SeccionesPanel({
         )}
       </div>
 
-      {secciones.length === 0 &&
+      {secciones.length ===
+        0 &&
         !mostrarFormulario && (
           <div className="mt-8 border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
             <h2 className="text-lg font-semibold text-slate-950">
-              Todavía no hay secciones
+              Todavía no hay
+              secciones
             </h2>
 
             <p className="mt-2 text-sm text-slate-500">
-              Creá la primera sección
-              para comenzar a
-              administrar el
+              Creá la primera
+              sección para comenzar
+              a administrar el
               contenido público.
             </p>
           </div>
